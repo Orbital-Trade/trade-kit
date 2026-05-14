@@ -1,0 +1,16 @@
+{
+  "rsi_entry": 20.0,
+  "rsi_exit": 50.0,
+  "stop_pct": 5.0,
+  "max_hold_days": 5,
+  "budget": 150.0,
+  "min_adv": 500000.0,
+  "min_price": 3.0,
+  "scan_interval_sec": 300,
+  "watchlist": [
+    "RKLB", "LUNR", "ASTS", "KTOS", "IONQ", "RDW",
+    "JOBY", "ACHR", "PL", "EXTR", "QUBT", "SMR", "OKLO",
+    "SPIR", "XOM", "CVX", "XLE", "ITA", "JETS",
+    "JPM", "BAC", "GS", "V"
+  ]
+}

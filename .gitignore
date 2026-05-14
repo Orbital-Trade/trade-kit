@@ -1,0 +1,32 @@
+# Compiled binaries
+tiger/tiger-cli
+moomoo/moomoo-cli
+scheduler/scheduler
+daytrader/daytrader-bot
+earnings/earnings-bot
+bounce/bounce-bot
+controller/controller
+index/index-trader
+notifier/notifier
+
+# Runtime state — contains personal paths and live orders
+scheduler/order-queue.json
+scheduler/logs/
+controller/logs/
+controller/nav-history.json
+
+# Secrets
+**/.env
+**/tiger_openapi_config.properties
+**/OpenD.xml
+
+# Logs
+*.log
+/tmp/
+
+# Go
+**/vendor/
+
+# OS
+.DS_Store
+Thumbs.db

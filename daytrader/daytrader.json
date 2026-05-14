@@ -1,0 +1,18 @@
+{
+  "gap_min_pct": 3.0,
+  "gap_max_pct": 20.0,
+  "entry_window_start_min": 575,
+  "entry_window_end_min": 600,
+  "exit_by_min": 660,
+  "stop_pct": 2.0,
+  "rr_min": 3.0,
+  "budget": 200.0,
+  "min_adv": 500000.0,
+  "min_price": 3.0,
+  "scan_interval_sec": 60,
+  "watchlist": [
+    "LUNR", "RKLB", "ASTS", "KTOS", "IONQ", "RDW",
+    "SMR", "OKLO", "LAR", "LAC", "SPIR",
+    "QUBT", "EXTR", "QQQ"
+  ]
+}

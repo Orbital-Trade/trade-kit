@@ -1,0 +1,10 @@
+{
+  "t1_symbols": ["Z74", "ES3", "D05", "O39", "SGOV"],
+  "position_max_pct": 30.0,
+  "cash_reserve_pct": 15.0,
+  "max_positions": 6,
+  "circuit_breaker_alert_pct": 10.0,
+  "circuit_breaker_estop_pct": 15.0,
+  "rr_min_swing": 3.0,
+  "rr_min_scalp": 2.0
+}

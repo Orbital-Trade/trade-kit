@@ -1,0 +1,578 @@
+// Package client implements a minimal Futu OpenD TCP client in pure Go.
+//
+// OpenD listens on localhost:11111 by default. Messages use a 44-byte header
+// followed by a JSON body (body_type=1). No protobuf dependency needed.
+//
+// Packet layout:
+//   [0:4]   magic  — 0x46 0x54 0x20 0x20 ("FT  ")
+//   [4:8]   proto_id  (uint32 LE)
+//   [8:12]  serial_no (uint32 LE) — monotonically increasing per connection
+//   [12:16] body_len  (uint32 LE)
+//   [16:20] body_type (uint32 LE) — 1 = JSON
+//   [20:40] SHA1 of body (20 bytes) — zeros accepted by OpenD
+//   [40:44] reserved  (zeros)
+//   [44:]   JSON body
+package client
+
+import (
+	"crypto/md5"
+	"encoding/binary"
+	"encoding/json"
+	"fmt"
+	"net"
+	"os"
+	"strconv"
+	"strings"
+	"sync/atomic"
+	"time"
+)
+
+// Proto IDs
+const (
+	protoInitConnect       = 1001
+	protoGetAccList        = 2001
+	protoUnlockTrade       = 2005
+	protoGetPositionList   = 2102
+	protoGetAccInfo        = 2101
+	protoGetOrderList      = 2111
+	protoPlaceOrder        = 2202
+	protoModifyOrder       = 2205
+)
+
+const (
+	headerSize    = 44
+	bodyTypeJSON  = 1
+	secFirmFUTUSG = 5
+	trdEnvReal    = 1
+)
+
+var magic = [4]byte{0x46, 0x54, 0x20, 0x20}
+
+// Client is a connected, authenticated Futu OpenD session.
+type Client struct {
+	conn    net.Conn
+	paper   bool
+	accID   int64
+	serial  uint32
+}
+
+// Config holds OpenD connection parameters loaded from environment / .env file.
+type Config struct {
+	Host      string
+	Port      int
+	TradePass string // 6-digit PIN
+	AccID     int64
+}
+
+// LoadConfig reads MOOMOO_HOST, MOOMOO_PORT, TRADE_PASSWORD, ACC_ID
+// from the environment (or a .env file next to the binary).
+func LoadConfig() Config {
+	loadEnvFile()
+	host := getenv("MOOMOO_HOST", "127.0.0.1")
+	port, _ := strconv.Atoi(getenv("MOOMOO_PORT", "11111"))
+	if port == 0 {
+		port = 11111
+	}
+	accID, _ := strconv.ParseInt(getenv("ACC_ID", "0"), 10, 64)
+	return Config{
+		Host:      host,
+		Port:      port,
+		TradePass: getenv("TRADE_PASSWORD", ""),
+		AccID:     accID,
+	}
+}
+
+// Connect establishes a TCP connection to OpenD, initialises the session,
+// discovers the account ID if not configured, and unlocks trading.
+func Connect(cfg Config, paper bool) (*Client, error) {
+	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+	conn, err := net.DialTimeout("tcp", addr, 5*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("OpenD not running on %s — start OpenD first: %w", addr, err)
+	}
+	c := &Client{conn: conn, paper: paper}
+
+	// 1. InitConnect
+	if err := c.initConnect(); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("init: %w", err)
+	}
+
+	// 2. Discover account ID
+	accID := cfg.AccID
+	if accID == 0 {
+		accID, err = c.discoverAccID()
+		if err != nil {
+			conn.Close()
+			return nil, fmt.Errorf("get_acc_list: %w", err)
+		}
+	}
+	c.accID = accID
+
+	// 3. Unlock trading (required before any trade operation)
+	if cfg.TradePass != "" {
+		if err := c.unlockTrade(cfg.TradePass); err != nil {
+			conn.Close()
+			return nil, fmt.Errorf("unlock_trade: %w", err)
+		}
+	}
+
+	return c, nil
+}
+
+// Close shuts down the connection.
+func (c *Client) Close() { c.conn.Close() }
+
+// IsPaper returns true when in simulation mode.
+func (c *Client) IsPaper() bool { return c.paper }
+
+// AccID returns the resolved account ID.
+func (c *Client) AccID() int64 { return c.accID }
+
+// ─── Public API ──────────────────────────────────────────────────────────────
+
+type Position struct {
+	Symbol       string
+	Shares       int64
+	AvgCost      float64
+	MarketPrice  float64
+	MarketValue  float64
+	UnrealPnL    float64
+	UnrealPct    float64
+}
+
+type AccountInfo struct {
+	NetAssets   float64
+	Cash        float64
+	MarketValue float64
+	BuyingPower float64
+	Currency    string
+}
+
+type Order struct {
+	OrderID  string
+	Symbol   string
+	Side     string
+	Type     string
+	Qty      int64
+	Filled   int64
+	Price    float64
+	AuxPrice float64
+	TIF      string
+	Status   string
+}
+
+type OrderResult struct {
+	OrderID string
+	Status  string
+	Symbol  string
+	Side    string
+	Qty     int64
+	Price   float64
+}
+
+func (c *Client) Positions() ([]Position, error) {
+	req := map[string]any{
+		"c2s": map[string]any{
+			"header": c.trdHeader(),
+		},
+	}
+	raw, err := c.call(protoGetPositionList, req)
+	if err != nil {
+		return nil, err
+	}
+	var resp struct {
+		S2C struct {
+			PositionList []struct {
+				Code         string  `json:"code"`
+				Qty          int64   `json:"qty"`
+				CostPrice    float64 `json:"costPrice"`
+				NominalPrice float64 `json:"nominalPrice"`
+				MarketVal    float64 `json:"marketVal"`
+				PlVal        float64 `json:"plVal"`
+				PlRatio      float64 `json:"plRatio"`
+			} `json:"positionList"`
+		} `json:"s2c"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("parse positions: %w", err)
+	}
+	var out []Position
+	for _, p := range resp.S2C.PositionList {
+		out = append(out, Position{
+			Symbol:      p.Code,
+			Shares:      p.Qty,
+			AvgCost:     p.CostPrice,
+			MarketPrice: p.NominalPrice,
+			MarketValue: p.MarketVal,
+			UnrealPnL:   p.PlVal,
+			UnrealPct:   p.PlRatio * 100,
+		})
+	}
+	return out, nil
+}
+
+func (c *Client) AccountInfo() (AccountInfo, error) {
+	req := map[string]any{
+		"c2s": map[string]any{
+			"header": c.trdHeader(),
+		},
+	}
+	raw, err := c.call(protoGetAccInfo, req)
+	if err != nil {
+		return AccountInfo{}, err
+	}
+	var resp struct {
+		S2C struct {
+			FundInfo struct {
+				TotalAssets float64 `json:"totalAssets"`
+				Cash        float64 `json:"cash"`
+				MarketVal   float64 `json:"marketVal"`
+				Power       float64 `json:"power"`
+				Currency    string  `json:"currency"`
+			} `json:"fundInfo"`
+		} `json:"s2c"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return AccountInfo{}, fmt.Errorf("parse account: %w", err)
+	}
+	fi := resp.S2C.FundInfo
+	return AccountInfo{
+		NetAssets:   fi.TotalAssets,
+		Cash:        fi.Cash,
+		MarketValue: fi.MarketVal,
+		BuyingPower: fi.Power,
+		Currency:    fi.Currency,
+	}, nil
+}
+
+func (c *Client) Orders() ([]Order, error) {
+	req := map[string]any{
+		"c2s": map[string]any{
+			"header":           c.trdHeader(),
+			"filterStatusList": []int{1, 2, 3, 5, 11}, // submitting,submitted,part-filled,waiting,part-cancel
+		},
+	}
+	raw, err := c.call(protoGetOrderList, req)
+	if err != nil {
+		return nil, err
+	}
+	var resp struct {
+		S2C struct {
+			OrderList []struct {
+				OrderID    string  `json:"orderID"`
+				Code       string  `json:"code"`
+				TrdSide    int     `json:"trdSide"`
+				OrderType  int     `json:"orderType"`
+				Qty        int64   `json:"qty"`
+				DealtQty   int64   `json:"dealtQty"`
+				Price      float64 `json:"price"`
+				AuxPrice   float64 `json:"auxPrice"`
+				TimeInForce int    `json:"timeInForce"`
+				OrderStatus int   `json:"orderStatus"`
+			} `json:"orderList"`
+		} `json:"s2c"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, fmt.Errorf("parse orders: %w", err)
+	}
+	var out []Order
+	for _, o := range resp.S2C.OrderList {
+		out = append(out, Order{
+			OrderID:  o.OrderID,
+			Symbol:   o.Code,
+			Side:     sideStr(o.TrdSide),
+			Type:     orderTypeStr(o.OrderType),
+			Qty:      o.Qty,
+			Filled:   o.DealtQty,
+			Price:    o.Price,
+			AuxPrice: o.AuxPrice,
+			TIF:      tifStr(o.TimeInForce),
+			Status:   orderStatusStr(o.OrderStatus),
+		})
+	}
+	return out, nil
+}
+
+func (c *Client) PlaceOrder(symbol, side, orderType string, qty int64, price, auxPrice float64, tif string) (OrderResult, error) {
+	if c.paper {
+		return OrderResult{OrderID: "PAPER", Status: "PAPER", Symbol: symbol, Side: side, Qty: qty, Price: price}, nil
+	}
+	req := map[string]any{
+		"c2s": map[string]any{
+			"header":    c.trdHeader(),
+			"trdSide":   sideInt(side),
+			"orderType": orderTypeInt(orderType),
+			"code":      symbol,
+			"qty":       qty,
+			"price":     price,
+			"auxPrice":  auxPrice,
+			"timeInForce": tifInt(tif),
+		},
+	}
+	raw, err := c.call(protoPlaceOrder, req)
+	if err != nil {
+		return OrderResult{}, fmt.Errorf("place_order %s: %w", symbol, err)
+	}
+	var resp struct {
+		S2C struct {
+			OrderID string `json:"orderID"`
+		} `json:"s2c"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return OrderResult{}, fmt.Errorf("parse place_order: %w", err)
+	}
+	return OrderResult{OrderID: resp.S2C.OrderID, Status: "SUBMITTED", Symbol: symbol, Side: side, Qty: qty, Price: price}, nil
+}
+
+func (c *Client) ModifyOrder(orderID string, qty int64, price, auxPrice float64, cancel bool) error {
+	modifyOp := 1 // NORMAL modify
+	if cancel {
+		modifyOp = 2 // CANCEL
+	}
+	req := map[string]any{
+		"c2s": map[string]any{
+			"header":         c.trdHeader(),
+			"orderID":        orderID,
+			"modifyOrderOp":  modifyOp,
+			"qty":            qty,
+			"price":          price,
+			"auxPrice":       auxPrice,
+		},
+	}
+	_, err := c.call(protoModifyOrder, req)
+	return err
+}
+
+// ─── Internal ────────────────────────────────────────────────────────────────
+
+func (c *Client) trdHeader() map[string]any {
+	return map[string]any{
+		"trdEnv": trdEnvReal,
+		"accID":  c.accID,
+		"trdMkt": 0, // 0 = all markets
+	}
+}
+
+func (c *Client) initConnect() error {
+	req := map[string]any{
+		"c2s": map[string]any{
+			"clientVer":   300,
+			"clientID":    "moomoo-cli-go",
+			"recvNotify":  false,
+		},
+	}
+	_, err := c.call(protoInitConnect, req)
+	return err
+}
+
+func (c *Client) discoverAccID() (int64, error) {
+	req := map[string]any{"c2s": map[string]any{"userID": 0}}
+	raw, err := c.call(protoGetAccList, req)
+	if err != nil {
+		return 0, err
+	}
+	var resp struct {
+		S2C struct {
+			AccList []struct {
+				AccID  int64  `json:"accID"`
+				TrdEnv int    `json:"trdEnv"`
+			} `json:"accList"`
+		} `json:"s2c"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return 0, fmt.Errorf("parse acc_list: %w", err)
+	}
+	for _, a := range resp.S2C.AccList {
+		if a.TrdEnv == trdEnvReal {
+			return a.AccID, nil
+		}
+	}
+	if len(resp.S2C.AccList) > 0 {
+		return resp.S2C.AccList[0].AccID, nil
+	}
+	return 0, fmt.Errorf("no accounts found")
+}
+
+func (c *Client) unlockTrade(pin string) error {
+	h := md5.Sum([]byte(pin))
+	md5hex := strings.ToLower(fmt.Sprintf("%x", h))
+	req := map[string]any{
+		"c2s": map[string]any{
+			"lockToken":    "",
+			"securityFirm": secFirmFUTUSG,
+			"pwdMD5":       md5hex,
+		},
+	}
+	_, err := c.call(protoUnlockTrade, req)
+	return err
+}
+
+func (c *Client) call(protoID uint32, payload any) (json.RawMessage, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	sn := atomic.AddUint32(&c.serial, 1)
+	hdr := make([]byte, headerSize)
+	copy(hdr[0:4], magic[:])
+	binary.LittleEndian.PutUint32(hdr[4:8], protoID)
+	binary.LittleEndian.PutUint32(hdr[8:12], sn)
+	binary.LittleEndian.PutUint32(hdr[12:16], uint32(len(body)))
+	binary.LittleEndian.PutUint32(hdr[16:20], bodyTypeJSON)
+	// bytes 20-43: SHA1 + reserved — leave as zeros (OpenD accepts this)
+
+	c.conn.SetDeadline(time.Now().Add(10 * time.Second))
+	if _, err := c.conn.Write(append(hdr, body...)); err != nil {
+		return nil, fmt.Errorf("send proto %d: %w", protoID, err)
+	}
+
+	// Read response header
+	rHdr := make([]byte, headerSize)
+	if _, err := readFull(c.conn, rHdr); err != nil {
+		return nil, fmt.Errorf("recv header proto %d: %w", protoID, err)
+	}
+	bodyLen := binary.LittleEndian.Uint32(rHdr[12:16])
+	rBody := make([]byte, bodyLen)
+	if bodyLen > 0 {
+		if _, err := readFull(c.conn, rBody); err != nil {
+			return nil, fmt.Errorf("recv body proto %d: %w", protoID, err)
+		}
+	}
+
+	// Check for error in response
+	var errCheck struct {
+		RetType int    `json:"retType"`
+		RetMsg  string `json:"retMsg"`
+	}
+	if err := json.Unmarshal(rBody, &errCheck); err == nil && errCheck.RetType != 0 {
+		return nil, fmt.Errorf("OpenD error %d: %s", errCheck.RetType, errCheck.RetMsg)
+	}
+
+	return json.RawMessage(rBody), nil
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+func readFull(conn net.Conn, buf []byte) (int, error) {
+	total := 0
+	for total < len(buf) {
+		n, err := conn.Read(buf[total:])
+		total += n
+		if err != nil {
+			return total, err
+		}
+	}
+	return total, nil
+}
+
+func sideStr(v int) string {
+	if v == 1 {
+		return "BUY"
+	}
+	return "SELL"
+}
+
+func sideInt(s string) int {
+	if strings.ToUpper(s) == "BUY" {
+		return 1
+	}
+	return 2
+}
+
+func orderTypeStr(v int) string {
+	switch v {
+	case 1:
+		return "LMT"
+	case 5:
+		return "MKT"
+	case 6:
+		return "STP"
+	default:
+		return fmt.Sprintf("%d", v)
+	}
+}
+
+func orderTypeInt(s string) int {
+	switch strings.ToUpper(s) {
+	case "LMT", "LIMIT":
+		return 1
+	case "MKT", "MARKET":
+		return 5
+	case "STP", "STOP":
+		return 6
+	default:
+		return 1
+	}
+}
+
+func tifStr(v int) string {
+	if v == 1 {
+		return "GTC"
+	}
+	return "DAY"
+}
+
+func tifInt(s string) int {
+	if strings.ToUpper(s) == "GTC" {
+		return 1
+	}
+	return 0
+}
+
+func orderStatusStr(v int) string {
+	switch v {
+	case 1:
+		return "Submitting"
+	case 2:
+		return "Submitted"
+	case 3:
+		return "PartFilled"
+	case 4:
+		return "Filled"
+	case 5:
+		return "Cancelled"
+	case 11:
+		return "Failed"
+	default:
+		return fmt.Sprintf("%d", v)
+	}
+}
+
+func loadEnvFile() {
+	paths := []string{
+		".env",
+		"../../../brokers/Moomoo/.env",
+	}
+	if exe, err := os.Executable(); err == nil {
+		paths = append(paths, exe+"/../.env")
+	}
+	for _, p := range paths {
+		data, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			k, v, ok := strings.Cut(line, "=")
+			if !ok {
+				continue
+			}
+			if os.Getenv(strings.TrimSpace(k)) == "" {
+				os.Setenv(strings.TrimSpace(k), strings.TrimSpace(v))
+			}
+		}
+		return
+	}
+}
+
+func getenv(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}

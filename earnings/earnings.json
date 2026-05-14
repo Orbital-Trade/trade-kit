@@ -1,0 +1,20 @@
+{
+  "days_before": 3,
+  "stop_pct": 5.0,
+  "target_pct": 0.0,
+  "budget": 200.0,
+  "min_adv": 500000.0,
+  "min_price": 3.0,
+  "max_run_pct": 20.0,
+  "watchlist": [
+    "NVDA", "LUNR", "RKLB", "KTOS", "IONQ", "ASTS",
+    "RDW", "SMR", "OKLO", "SPIR", "LAR", "LAC",
+    "EXTR", "QUBT"
+  ],
+  "scan_interval_sec": 300,
+  "earnings_dates": {
+    "OKLO": "2026-05-13",
+    "LUNR": "2026-05-14",
+    "NVDA": "2026-05-20"
+  }
+}
