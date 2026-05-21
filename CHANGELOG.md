@@ -6,6 +6,21 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [0.2.0] — 2026-05-21
+
+### Added
+
+**tiger-cli: `analyze` command**
+- Multi-timeframe technical analysis: 1D / 1H / 15m
+- Indicators: RSI(14), MACD(12/26/9), Bollinger Bands(20,2), EMA(20/50/200)
+- Bias scoring per timeframe (BULLISH / NEUTRAL / BEARISH) + overall alignment
+- Tiger `kline` API primary; automatic fallback to Yahoo Finance when quota full
+- Futures support via `--futures` flag (uses `future_kline` + contract auto-resolution)
+- `--json` flag for scripting and MCP piping
+- Corrected RSI overbought (>70) and %B > 1.0 scoring — treated as overextension, not strength
+
+---
+
 ## [0.1.0] — 2026-05-15
 
 ### Initial release
