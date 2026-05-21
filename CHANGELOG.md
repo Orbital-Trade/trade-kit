@@ -6,7 +6,7 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ---
 
-## [0.2.0] — 2026-05-21
+## [0.3.0] — 2026-05-21
 
 ### Added
 
@@ -18,6 +18,21 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 - Futures support via `--futures` flag (uses `future_kline` + contract auto-resolution)
 - `--json` flag for scripting and MCP piping
 - Corrected RSI overbought (>70) and %B > 1.0 scoring — treated as overextension, not strength
+
+---
+
+## [0.2.0] — 2026-05-21
+
+### Added
+
+**tiger-cli: `markov` command**
+- Markov regime model: labels every historical trading day as BULL / SIDE / BEAR (20-day return ±5% thresholds)
+- Builds a 3×3 transition matrix from full price history (2 years of daily bars via Yahoo Finance)
+- Computes tomorrow's state distribution from current state row
+- N-day forecasts via matrix exponentiation (2d / 5d / 10d)
+- Signal = P(bull) − P(bear) with direction (LONG / SHORT / NEUTRAL) and confidence (HIGH / MEDIUM / LOW)
+- Stickiness detection: highlights states where self-transition probability > 50%
+- Works for US stocks and SGX (ES3.SI etc.), JSON output via --json
 
 ---
 

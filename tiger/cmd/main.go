@@ -48,6 +48,7 @@ Read commands (safe — no confirmation needed):
   orders                            List open/pending orders
   analyze <SYMBOL>                  Multi-timeframe technical analysis (RSI/MACD/BB/EMA)
            --futures                Treat SYMBOL as a futures root (MNQ, MES, ES …)
+  markov  <SYMBOL>                  Markov regime model — state probabilities + signal
 
 Write commands (paper: log only  |  live: confirm then execute):
   buy    <SYMBOL> <SHARES>          Market buy
@@ -103,6 +104,9 @@ Examples:
   tiger-cli analyze ES3.SI
   tiger-cli analyze MNQ --futures
   tiger-cli --json analyze AAPL
+  tiger-cli markov NVDA
+  tiger-cli markov ES3.SI
+  tiger-cli --json markov NVDA
 `
 
 func main() {
@@ -167,6 +171,9 @@ func main() {
 	case "analyze":
 		requireArgs(rest, 1, "analyze <SYMBOL> [--futures]")
 		cmdAnalyze(c, rest, *jsonFlag)
+	case "markov":
+		requireArgs(rest, 1, "markov <SYMBOL>")
+		cmdMarkov(c, rest[0], *jsonFlag)
 	default:
 		fatalf("unknown command %q\n\n%s", cmd, usage)
 	}
@@ -350,6 +357,85 @@ func printAnalysis(r ops.AnalyzeResult) {
 		r.Alignment, icon, r.BullCount, r.BearCount,
 		len(r.Timeframes)-r.BullCount-r.BearCount)
 	fmt.Println(sep)
+}
+
+func cmdMarkov(c *client.TigerClient, symbol string, asJSON bool) {
+	result, err := ops.Markov(c, strings.ToUpper(symbol))
+	check(err)
+	if asJSON {
+		printJSON(result)
+		return
+	}
+	printMarkov(result)
+}
+
+func printMarkov(r ops.MarkovResult) {
+	header := fmt.Sprintf("%s — Markov Regime Model  %s", r.Symbol, r.Timestamp)
+	fmt.Println(header)
+	fmt.Println(strings.Repeat("─", len(header)))
+	fmt.Println()
+
+	// Current state.
+	retSign := "+"
+	if r.Return20D < 0 {
+		retSign = ""
+	}
+	fmt.Printf("Current State:  %-6s  (20-day return: %s%.1f%%)\n", r.CurrentState, retSign, r.Return20D)
+	bullPct := float64(r.BullDays) / float64(r.TotalDays) * 100
+	sidePct := float64(r.SideDays) / float64(r.TotalDays) * 100
+	bearPct := float64(r.BearDays) / float64(r.TotalDays) * 100
+	fmt.Printf("History:        %d days  │  Bull: %.0f%%  Side: %.0f%%  Bear: %.0f%%\n\n",
+		r.TotalDays, bullPct, sidePct, bearPct)
+
+	// Transition matrix.
+	fmt.Println("Transition Matrix (row = current state, col = next state)")
+	fmt.Println("               → BULL    → SIDE    → BEAR")
+	stateLabels := [3]string{"BULL", "SIDE", "BEAR"}
+	for from := 0; from < 3; from++ {
+		sticky := ""
+		if r.Matrix[from][from] == max3(r.Matrix[from][0], r.Matrix[from][1], r.Matrix[from][2]) && r.Matrix[from][from] > 0.5 {
+			sticky = "  ← sticky"
+		}
+		fmt.Printf("  From %-4s  │  %5.1f%%   %5.1f%%   %5.1f%%  │%s\n",
+			stateLabels[from],
+			r.Matrix[from][0]*100, r.Matrix[from][1]*100, r.Matrix[from][2]*100,
+			sticky)
+	}
+
+	// Tomorrow.
+	fmt.Printf("\nTomorrow (from %s):\n", r.CurrentState)
+	fmt.Printf("  Bull: %5.1f%%   Side: %5.1f%%   Bear: %5.1f%%\n\n",
+		r.TomorrowBull*100, r.TomorrowSide*100, r.TomorrowBear*100)
+
+	// N-day forecasts.
+	if len(r.Forecasts) > 0 {
+		fmt.Println("N-day forecast:")
+		for _, f := range r.Forecasts {
+			fmt.Printf("  %2dd:  Bull: %5.1f%%   Side: %5.1f%%   Bear: %5.1f%%\n",
+				f.Days, f.Bull*100, f.Side*100, f.Bear*100)
+		}
+		fmt.Println()
+	}
+
+	// Signal.
+	sep := strings.Repeat("═", 50)
+	fmt.Println(sep)
+	signStr := fmt.Sprintf("%+.0f%%", r.Signal*100)
+	dirIcon := map[string]string{"LONG": "▲", "SHORT": "▼", "NEUTRAL": "◆"}[r.Direction]
+	fmt.Printf("SIGNAL:  %s  %s %s  (%s confidence)\n", signStr, r.Direction, dirIcon, r.Confidence)
+	fmt.Printf("  P(bull) %.0f%% − P(bear) %.0f%% = %s\n",
+		r.TomorrowBull*100, r.TomorrowBear*100, signStr)
+	fmt.Println(sep)
+}
+
+func max3(a, b, c float64) float64 {
+	if a >= b && a >= c {
+		return a
+	}
+	if b >= c {
+		return b
+	}
+	return c
 }
 
 // ── Write commands ─────────────────────────────────────────────────────────────
