@@ -46,6 +46,8 @@ Read commands (safe — no confirmation needed):
   account                           Account cash, buying power, net liquidation
   quote  <SYMBOL>                   Real-time price snapshot
   orders                            List open/pending orders
+  analyze <SYMBOL>                  Multi-timeframe technical analysis (RSI/MACD/BB/EMA)
+           --futures                Treat SYMBOL as a futures root (MNQ, MES, ES …)
 
 Write commands (paper: log only  |  live: confirm then execute):
   buy    <SYMBOL> <SHARES>          Market buy
@@ -97,6 +99,10 @@ Examples:
   tiger-cli futures entry MES long 1 --entry 5100 --stop 5090
   tiger-cli futures close MES long 1
   tiger-cli futures update-stop MES long 1 --stop 5095 --old-id 789012345
+  tiger-cli analyze AAPL
+  tiger-cli analyze ES3.SI
+  tiger-cli analyze MNQ --futures
+  tiger-cli --json analyze AAPL
 `
 
 func main() {
@@ -158,6 +164,9 @@ func main() {
 		cmdTarget(c, rest, *jsonFlag, *liveFlag)
 	case "futures":
 		cmdFutures(c, rest, *jsonFlag, *liveFlag)
+	case "analyze":
+		requireArgs(rest, 1, "analyze <SYMBOL> [--futures]")
+		cmdAnalyze(c, rest, *jsonFlag)
 	default:
 		fatalf("unknown command %q\n\n%s", cmd, usage)
 	}
@@ -243,6 +252,104 @@ func cmdOrders(c *client.TigerClient, asJSON bool) {
 			o.ID, o.Symbol, o.Action, o.OrderType, o.Quantity, o.FilledQty, lim, stp, o.TimeInForce, o.Status)
 	}
 	w.Flush()
+}
+
+func cmdAnalyze(c *client.TigerClient, args []string, asJSON bool) {
+	fs := flag.NewFlagSet("analyze", flag.ExitOnError)
+	isFutures := fs.Bool("futures", false, "Treat symbol as futures root")
+	fs.Parse(args[1:])
+
+	symbol := strings.ToUpper(args[0])
+	result, err := ops.Analyze(c, symbol, *isFutures)
+	check(err)
+
+	if asJSON {
+		printJSON(result)
+		return
+	}
+	printAnalysis(result)
+}
+
+func printAnalysis(r ops.AnalyzeResult) {
+	cs := "$"
+	if r.Currency == "SGD" {
+		cs = "S$"
+	}
+
+	header := fmt.Sprintf("%s — Multi-Timeframe Analysis  %s", r.Symbol, r.Timestamp)
+	if r.IsFutures {
+		header = fmt.Sprintf("%s (%s) — Multi-Timeframe Analysis  %s", r.Symbol, r.Contract, r.Timestamp)
+	}
+	fmt.Println(header)
+	fmt.Println(strings.Repeat("─", len(header)))
+
+	biasIcon := map[string]string{"BULLISH": "▲", "BEARISH": "▼", "NEUTRAL": "◆", "MIXED": "◈"}
+
+	for _, tf := range r.Timeframes {
+		fmt.Printf("\n%s  (%d bars)   Price: %s%.4f\n", tf.Timeframe, tf.Bars, cs, tf.Price)
+
+		switch tf.Bias {
+		case "INSUFFICIENT_DATA":
+			fmt.Println("  ⚠ Not enough bars to compute indicators")
+			continue
+		case "ERROR":
+			fmt.Printf("  ✗ Failed to fetch data: %s\n", tf.Err)
+			continue
+		}
+
+		rsiTag := "Neutral"
+		if tf.RSI > 70 {
+			rsiTag = "Overbought"
+		} else if tf.RSI > 55 {
+			rsiTag = "Bullish"
+		} else if tf.RSI < 30 {
+			rsiTag = "Oversold"
+		} else if tf.RSI < 45 {
+			rsiTag = "Bearish"
+		}
+		fmt.Printf("  RSI(14):  %.1f  [%s]\n", tf.RSI, rsiTag)
+
+		histSign := "+"
+		if tf.MACDHist < 0 {
+			histSign = ""
+		}
+		fmt.Printf("  MACD:     Line: %.4f  Sig: %.4f  Hist: %s%.4f\n",
+			tf.MACDLine, tf.MACDSignal, histSign, tf.MACDHist)
+
+		fmt.Printf("  BB(20):   %%B: %.2f  Upper: %s%.2f  Mid: %s%.2f  Lower: %s%.2f\n",
+			tf.BBPct, cs, tf.BBUpper, cs, tf.BBMiddle, cs, tf.BBLower)
+
+		emaStr := func(v float64) string {
+			if v == 0 {
+				return "N/A"
+			}
+			rel := "above"
+			if tf.Price < v {
+				rel = "below"
+			}
+			return fmt.Sprintf("%s%.2f (%s)", cs, v, rel)
+		}
+		fmt.Printf("  EMA:      20: %s  50: %s  200: %s\n",
+			emaStr(tf.EMA20), emaStr(tf.EMA50), emaStr(tf.EMA200))
+
+		icon := biasIcon[tf.Bias]
+		if icon == "" {
+			icon = "?"
+		}
+		fmt.Printf("  Bias:     %s %s  (score %+d/5)\n", tf.Bias, icon, tf.Score)
+	}
+
+	fmt.Println()
+	sep := strings.Repeat("═", 50)
+	fmt.Println(sep)
+	icon := biasIcon[r.Alignment]
+	if icon == "" {
+		icon = "?"
+	}
+	fmt.Printf("ALIGNMENT:  %s %s  (%dB / %dBr / %dN)\n",
+		r.Alignment, icon, r.BullCount, r.BearCount,
+		len(r.Timeframes)-r.BullCount-r.BearCount)
+	fmt.Println(sep)
 }
 
 // ── Write commands ─────────────────────────────────────────────────────────────
