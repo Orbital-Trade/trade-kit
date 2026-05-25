@@ -200,48 +200,60 @@ func (q *Queue) flush() error {
 }
 
 // computeExecuteAt returns the UTC time when an order in the given window should fire.
+// Uses the America/New_York timezone to handle EST/EDT transitions automatically.
 func computeExecuteAt(window string) time.Time {
 	now := time.Now().UTC()
-	// EDT = UTC-4 (covers May–Nov). EST = UTC-5 (Dec–Mar).
-	// Using fixed EDT offset since we're in May.
-	const etOffset = -4 * time.Hour
-	et := now.Add(etOffset)
+	loc := etLocation()
 
 	switch window {
 	case WindowPreMarket:
-		return nextSessionTime(et, 4, 0, etOffset)
+		return nextSessionTime(now, loc, 4, 0)
 	case WindowPreOpen:
-		return nextSessionTime(et, 9, 20, etOffset)
+		return nextSessionTime(now, loc, 9, 20)
 	case WindowMorning:
 		// 7:00 AM SGT = 23:00 UTC previous day
-		const sgtOffset = 8 * time.Hour
-		sgt := now.Add(sgtOffset)
-		target := time.Date(sgt.Year(), sgt.Month(), sgt.Day(), 7, 0, 0, 0, time.UTC)
-		if !sgt.Before(target) {
+		sgLoc, err := time.LoadLocation("Asia/Singapore")
+		if err != nil {
+			// Fallback: SGT is always UTC+8 (no DST)
+			sgLoc = time.FixedZone("SGT", 8*60*60)
+		}
+		sgtNow := now.In(sgLoc)
+		target := time.Date(sgtNow.Year(), sgtNow.Month(), sgtNow.Day(), 7, 0, 0, 0, sgLoc)
+		if !sgtNow.Before(target) {
 			target = target.Add(24 * time.Hour)
 		}
 		for w := target.Weekday(); w == time.Saturday || w == time.Sunday; w = target.Weekday() {
 			target = target.Add(24 * time.Hour)
 		}
-		return target.Add(-sgtOffset)
+		return target.UTC()
 	case WindowNow:
 		return now
 	default: // WindowNextOpen
-		return nextSessionTime(et, 9, 30, etOffset)
+		return nextSessionTime(now, loc, 9, 30)
 	}
 }
 
-// nextSessionTime returns the next occurrence of hour:min ET, skipping weekends.
-func nextSessionTime(et time.Time, hour, min int, offset time.Duration) time.Time {
-	target := time.Date(et.Year(), et.Month(), et.Day(), hour, min, 0, 0, time.UTC)
-	if !et.Before(target) {
+// etLocation returns the America/New_York location for proper EST/EDT handling.
+// Falls back to fixed UTC-5 (EST) if the timezone database is unavailable.
+func etLocation() *time.Location {
+	loc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		return time.FixedZone("EST", -5*60*60)
+	}
+	return loc
+}
+
+// nextSessionTime returns the next occurrence of hour:min in the given location, skipping weekends.
+func nextSessionTime(now time.Time, loc *time.Location, hour, min int) time.Time {
+	local := now.In(loc)
+	target := time.Date(local.Year(), local.Month(), local.Day(), hour, min, 0, 0, loc)
+	if !local.Before(target) {
 		target = target.Add(24 * time.Hour)
 	}
 	for w := target.Weekday(); w == time.Saturday || w == time.Sunday; w = target.Weekday() {
 		target = target.Add(24 * time.Hour)
 	}
-	// target is in ET-as-UTC, convert to real UTC
-	return target.Add(-offset)
+	return target.UTC()
 }
 
 func newID() string {

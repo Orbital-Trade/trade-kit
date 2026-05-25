@@ -101,7 +101,9 @@ func FuturesEntry(c Caller, symbol, direction string, contracts int, entryPrice,
 	stopRes, err := parseOrderID(stopData, symbol, stopAction, "STP", contracts, stopPrice)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[CRITICAL] stop response parse failed after entry %s — sending emergency market close\n", entryRes.OrderID)
-		FuturesClose(c, symbol, direction, contracts) //nolint:errcheck
+		if _, closeErr := FuturesClose(c, symbol, direction, contracts); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "[CRITICAL] emergency close also failed — MANUAL INTERVENTION REQUIRED: entry=%s closeErr=%v\n", entryRes.OrderID, closeErr)
+		}
 		return FuturesEntryResult{}, fmt.Errorf("futures_entry %s: stop parse failed (position emergency-closed): %w", symbol, err)
 	}
 

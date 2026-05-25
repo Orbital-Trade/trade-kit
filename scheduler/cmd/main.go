@@ -146,16 +146,27 @@ func parseBuySell(t string, args []string) queue.Order {
 	if len(args) < 2 {
 		fatalf("usage: %s <SYMBOL> <QTY> [--limit price] [--note text]", t)
 	}
-	o := queue.Order{Type: t, Symbol: strings.ToUpper(args[0])}
+	sym := strings.ToUpper(strings.TrimSpace(args[0]))
+	if sym == "" {
+		fatalf("symbol must not be empty")
+	}
+	o := queue.Order{Type: t, Symbol: sym}
 	qty, err := strconv.Atoi(args[1])
 	if err != nil {
 		fatalf("invalid qty %q", args[1])
+	}
+	if qty <= 0 {
+		fatalf("qty must be greater than zero, got %d", qty)
 	}
 	o.Qty = qty
 	for i := 2; i < len(args)-1; i++ {
 		switch args[i] {
 		case "--limit":
-			o.Limit, _ = strconv.ParseFloat(args[i+1], 64)
+			limit, ferr := strconv.ParseFloat(args[i+1], 64)
+			if ferr != nil || limit <= 0 {
+				fatalf("--limit must be a positive number, got %q", args[i+1])
+			}
+			o.Limit = limit
 			i++
 		case "--note":
 			o.Note = args[i+1]
@@ -169,11 +180,23 @@ func parseStop(args []string) queue.Order {
 	if len(args) < 2 {
 		fatalf("usage: stop <SYMBOL> <QTY> --price <stop_price>")
 	}
-	o := queue.Order{Type: queue.TypeStop, Symbol: strings.ToUpper(args[0])}
-	o.Qty, _ = strconv.Atoi(args[1])
+	sym := strings.ToUpper(strings.TrimSpace(args[0]))
+	if sym == "" {
+		fatalf("symbol must not be empty")
+	}
+	o := queue.Order{Type: queue.TypeStop, Symbol: sym}
+	qty, err := strconv.Atoi(args[1])
+	if err != nil || qty <= 0 {
+		fatalf("qty must be a positive integer, got %q", args[1])
+	}
+	o.Qty = qty
 	for i := 2; i < len(args)-1; i++ {
 		if args[i] == "--price" {
-			o.Stop, _ = strconv.ParseFloat(args[i+1], 64)
+			price, ferr := strconv.ParseFloat(args[i+1], 64)
+			if ferr != nil || price <= 0 {
+				fatalf("--price must be a positive number, got %q", args[i+1])
+			}
+			o.Stop = price
 			i++
 		}
 	}
@@ -187,11 +210,23 @@ func parseTarget(args []string) queue.Order {
 	if len(args) < 2 {
 		fatalf("usage: target <SYMBOL> <QTY> --price <target_price>")
 	}
-	o := queue.Order{Type: queue.TypeTarget, Symbol: strings.ToUpper(args[0])}
-	o.Qty, _ = strconv.Atoi(args[1])
+	sym := strings.ToUpper(strings.TrimSpace(args[0]))
+	if sym == "" {
+		fatalf("symbol must not be empty")
+	}
+	o := queue.Order{Type: queue.TypeTarget, Symbol: sym}
+	qty, err := strconv.Atoi(args[1])
+	if err != nil || qty <= 0 {
+		fatalf("qty must be a positive integer, got %q", args[1])
+	}
+	o.Qty = qty
 	for i := 2; i < len(args)-1; i++ {
 		if args[i] == "--price" {
-			o.Target, _ = strconv.ParseFloat(args[i+1], 64)
+			price, ferr := strconv.ParseFloat(args[i+1], 64)
+			if ferr != nil || price <= 0 {
+				fatalf("--price must be a positive number, got %q", args[i+1])
+			}
+			o.Target = price
 			i++
 		}
 	}
@@ -518,7 +553,12 @@ func execute(c ops.Caller, o queue.Order) (string, error) {
 		return fmt.Sprintf("cancelled %s", res.Status), nil
 
 	case queue.TypeExec:
-		cmd := exec.Command("sh", "-c", o.Cmd)
+		shell := o.Cmd
+		if home, err := os.UserHomeDir(); err == nil {
+			shell = strings.ReplaceAll(shell, "~/", home+"/")
+			shell = strings.ReplaceAll(shell, "~\\", home+"\\")
+		}
+		cmd := exec.Command("sh", "-c", shell)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return "", fmt.Errorf("%w\n%s", err, string(out))
@@ -545,7 +585,12 @@ func min(a, b int) int {
 func printTimeHeader() {
 	now := time.Now().UTC()
 	sgt := now.Add(8 * time.Hour)
-	et := now.Add(-4 * time.Hour) // EDT (UTC-4, covers Mar–Nov)
+	// Use proper America/New_York timezone for automatic EST/EDT switching.
+	etLoc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		etLoc = time.FixedZone("EST", -5*60*60)
+	}
+	et := now.In(etLoc)
 
 	state, nextEvent, nextIn := marketState(et)
 
@@ -560,15 +605,18 @@ func printTimeHeader() {
 }
 
 // marketState returns the current US market state, next event name, and time until it.
+// et must be a time.Time in the America/New_York timezone.
 func marketState(et time.Time) (state, nextEvent string, nextIn time.Duration) {
+	loc := et.Location()
+
 	if w := et.Weekday(); w == time.Saturday || w == time.Sunday {
 		// Next Monday pre-market
 		daysUntilMon := (int(time.Monday) - int(w) + 7) % 7
 		if daysUntilMon == 0 {
 			daysUntilMon = 7
 		}
-		next := time.Date(et.Year(), et.Month(), et.Day()+daysUntilMon, 4, 0, 0, 0, time.UTC)
-		return "🔴 weekend", "pre-market Mon", time.Until(next.Add(4 * time.Hour))
+		next := time.Date(et.Year(), et.Month(), et.Day()+daysUntilMon, 4, 0, 0, 0, loc)
+		return "🔴 weekend", "pre-market Mon", time.Until(next)
 	}
 
 	h, m, _ := et.Clock()
@@ -577,24 +625,24 @@ func marketState(et time.Time) (state, nextEvent string, nextIn time.Duration) {
 	switch {
 	case mins < 4*60:
 		// Overnight — next pre-market today
-		next := time.Date(et.Year(), et.Month(), et.Day(), 4, 0, 0, 0, time.UTC)
-		return "🔴 closed (overnight)", "pre-market", time.Until(next.Add(4 * time.Hour))
+		next := time.Date(et.Year(), et.Month(), et.Day(), 4, 0, 0, 0, loc)
+		return "🔴 closed (overnight)", "pre-market", time.Until(next)
 	case mins < 9*60+30:
 		// Pre-market
-		next := time.Date(et.Year(), et.Month(), et.Day(), 9, 30, 0, 0, time.UTC)
-		return "🟡 pre-market", "market open", time.Until(next.Add(4 * time.Hour))
+		next := time.Date(et.Year(), et.Month(), et.Day(), 9, 30, 0, 0, loc)
+		return "🟡 pre-market", "market open", time.Until(next)
 	case mins < 16*60:
 		// Regular hours
-		next := time.Date(et.Year(), et.Month(), et.Day(), 16, 0, 0, 0, time.UTC)
-		return "🟢 market open", "market close", time.Until(next.Add(4 * time.Hour))
+		next := time.Date(et.Year(), et.Month(), et.Day(), 16, 0, 0, 0, loc)
+		return "🟢 market open", "market close", time.Until(next)
 	case mins < 20*60:
 		// After-hours
-		next := time.Date(et.Year(), et.Month(), et.Day(), 20, 0, 0, 0, time.UTC)
-		return "🟡 after-hours", "closed", time.Until(next.Add(4 * time.Hour))
+		next := time.Date(et.Year(), et.Month(), et.Day(), 20, 0, 0, 0, loc)
+		return "🟡 after-hours", "closed", time.Until(next)
 	default:
 		// Overnight — next pre-market tomorrow
-		next := time.Date(et.Year(), et.Month(), et.Day()+1, 4, 0, 0, 0, time.UTC)
-		return "🔴 closed (overnight)", "pre-market", time.Until(next.Add(4 * time.Hour))
+		next := time.Date(et.Year(), et.Month(), et.Day()+1, 4, 0, 0, 0, loc)
+		return "🔴 closed (overnight)", "pre-market", time.Until(next)
 	}
 }
 

@@ -224,14 +224,20 @@ func yahooKline(symbol, period string) ([]bar, error) {
 	}
 
 	url := fmt.Sprintf("https://query2.finance.yahoo.com/v8/finance/chart/%s?interval=%s&range=%s", ticker, interval, rng)
-	req, _ := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("yahoo_kline %s %s: build request: %w", symbol, period, err)
+	}
 	req.Header.Set("User-Agent", "Mozilla/5.0")
 	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("yahoo_kline %s %s: %w", symbol, period, err)
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("yahoo_kline %s %s: read response: %w", symbol, period, err)
+	}
 
 	var yr struct {
 		Chart struct {

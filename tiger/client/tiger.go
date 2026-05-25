@@ -100,7 +100,10 @@ func (c *TigerClient) Call(method string, bizContent interface{}) (json.RawMessa
 	if debugAPI {
 		log.Printf("[DEBUG] Tiger %s biz_content=%s", method, string(body))
 	}
-	reqBody, _ := json.Marshal(params)
+	reqBody, err := json.Marshal(params)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
 	req, err := http.NewRequest("POST", baseURL, strings.NewReader(string(reqBody)))
 	if err != nil {
 		return nil, err

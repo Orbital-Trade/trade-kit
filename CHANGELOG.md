@@ -6,6 +6,36 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [0.3.1] — 2026-05-25
+
+### Fixed
+
+**scheduler: timezone correctness**
+- Replaced hardcoded UTC-4 (EDT) offset with `time.LoadLocation("America/New_York")` for proper EST/EDT transitions
+- Applies to both `computeExecuteAt` (queue scheduling) and `printTimeHeader` (clock display)
+- Orders scheduled in Dec–Mar were firing 1 hour early due to the fixed EDT offset; now uses DST-aware lookup
+- `nextSessionTime` rewritten to accept `*time.Location` instead of a fixed duration offset
+- Falls back to `UTC-5` (EST) if system timezone database is unavailable
+
+**scheduler: input validation**
+- `buy`/`sell` commands now reject empty symbols, non-positive quantities, and non-positive limit prices
+- `stop` command validates symbol, quantity > 0, and `--price` > 0
+- `target` command validates symbol, quantity > 0, and `--price` > 0
+- Errors print to stderr and exit with code 1 before anything is queued
+
+**tiger/ops: error propagation in `analyze`**
+- `yahooKline`: `http.NewRequest` error was silently discarded; a nil request would panic in `http.Client.Do` — now returns the error
+- `yahooKline`: `io.ReadAll` error was silently discarded; a failed read produced an opaque JSON parse error — now returns the error with context
+
+**tiger/client: `json.Marshal` error in `Call`**
+- `json.Marshal(params)` error was discarded with `_`; now propagated so callers see the failure
+
+**tiger/ops: emergency close error logged in `FuturesEntry`**
+- When stop-order response parsing fails after a live entry, the emergency `FuturesClose` error was silently dropped
+- Both the stop-parse failure and any close failure are now logged to stderr before returning
+
+---
+
 ## [0.3.0] — 2026-05-21
 
 ### Added
