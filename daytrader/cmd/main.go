@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -82,7 +83,19 @@ func cmdScan(cfg *strategy.Config, bus *signal.Bus, b broker.Broker) {
 		printEval(eval)
 		if eval.Action == "enter" || eval.Action == "enter_short" {
 			sig := buildSignal(eval)
-			if ok, _ := bus.Add(sig); ok { fmt.Printf("         ✓ signal written\n"); added++ }
+			if ok, _ := bus.Add(sig); ok {
+				fmt.Printf("         ✓ signal written\n")
+				added++
+				sigDir := "BUY"
+				if eval.Action == "enter_short" { sigDir = "SELL" }
+				notify("--symbol", sig.Symbol, "--signal", sigDir,
+					"--price", fmt.Sprintf("%.2f", sig.EntryLimit),
+					"--stop", fmt.Sprintf("%.2f", sig.Stop),
+					"--target", fmt.Sprintf("%.2f", sig.Target),
+					"--qty", fmt.Sprintf("%d", sig.Qty),
+					"--strategy", "daytrader",
+					"--note", eval.Reason)
+			}
 		}
 		time.Sleep(400 * time.Millisecond)
 	}
@@ -125,7 +138,16 @@ func runScan(cfg *strategy.Config, bus *signal.Bus) {
 		eval := strategy.Evaluate(setup, cfg)
 		if eval.Action == "enter" {
 			sig := buildSignal(eval)
-			if ok, _ := bus.Add(sig); ok { fmt.Printf("  %-6s  gap %.1f%% → signal\n", sym, setup.GapPct) }
+			if ok, _ := bus.Add(sig); ok {
+				fmt.Printf("  %-6s  gap %.1f%% → signal\n", sym, setup.GapPct)
+				notify("--symbol", sig.Symbol, "--signal", "BUY",
+					"--price", fmt.Sprintf("%.2f", sig.EntryLimit),
+					"--stop", fmt.Sprintf("%.2f", sig.Stop),
+					"--target", fmt.Sprintf("%.2f", sig.Target),
+					"--qty", fmt.Sprintf("%d", sig.Qty),
+					"--strategy", "daytrader",
+					"--note", fmt.Sprintf("gap %.1f%%", setup.GapPct))
+			}
 		}
 		time.Sleep(400 * time.Millisecond)
 	}
@@ -153,6 +175,13 @@ func runExecutor(bus *signal.Bus, db *store.Store, b broker.Broker, cfg *strateg
 			continue
 		}
 		_ = bus.Update(sig.ID, func(s *signal.Signal) { s.Status = signal.StatusActive; s.EntryOrderID = entryID; s.StopOrderID = stopID })
+		notify("--symbol", sig.Symbol, "--signal", "BUY",
+			"--price", fmt.Sprintf("%.2f", sig.EntryLimit),
+			"--stop", fmt.Sprintf("%.2f", sig.Stop),
+			"--target", fmt.Sprintf("%.2f", sig.Target),
+			"--qty", fmt.Sprintf("%d", sig.Qty),
+			"--strategy", "daytrader",
+			"--note", fmt.Sprintf("order placed: %s", entryID))
 		_ = db.Save(store.Trade{
 			Symbol: sig.Symbol, EntryPrice: sig.EntryLimit, GapPct: setup.GapPct,
 			StopPrice: sig.Stop, TargetPrice: sig.Target, Qty: sig.Qty,
@@ -294,6 +323,20 @@ func isMarketHours() bool {
 func nowET() string { return time.Now().UTC().Add(-4*time.Hour).Format("15:04:05 ET") }
 func abs(x float64) float64 { if x < 0 { return -x }; return x }
 func fatalf(format string, args ...interface{}) { fmt.Fprintf(os.Stderr, "daytrader-bot: "+format+"\n", args...); os.Exit(1) }
+
+// notify shells out to the notifier binary (if present in PATH).
+// Runs in a goroutine so it never blocks the trading loop.
+// Silent if notifier is not installed — stdout-only fallback.
+func notify(args ...string) {
+	path, err := exec.LookPath("notifier")
+	if err != nil {
+		return
+	}
+	go func() {
+		cmd := exec.Command(path, append([]string{"send"}, args...)...)
+		_ = cmd.Run()
+	}()
+}
 func usage() {
 	fmt.Print(`daytrader-bot — gap-up day trade strategy (Game 3)
 

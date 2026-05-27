@@ -125,6 +125,12 @@ func main() {
 		}
 		fmt.Printf("\n  ▶ SIGNAL %s %s %dsh  |  %s\n",
 			arrow, sig.Symbol, sig.Shares, sig.Reason)
+		sigDir := "BUY"
+		if sig.Direction != strategy.Long { sigDir = "SELL" }
+		notify("--symbol", sig.Symbol, "--signal", sigDir,
+			"--qty", fmt.Sprintf("%d", sig.Shares),
+			"--strategy", "index",
+			"--note", sig.Reason)
 
 		if *mode == "watch" {
 			fmt.Println("  (watch mode — no action)")
@@ -207,6 +213,20 @@ func confirm(prompt string) bool {
 
 func sleep(sec int) {
 	time.Sleep(time.Duration(sec) * time.Second)
+}
+
+// notify shells out to the notifier binary (if present in PATH).
+// Runs in a goroutine so it never blocks the trading loop.
+// Silent if notifier is not installed — stdout-only fallback.
+func notify(args ...string) {
+	path, err := exec.LookPath("notifier")
+	if err != nil {
+		return
+	}
+	go func() {
+		cmd := exec.Command(path, append([]string{"send"}, args...)...)
+		_ = cmd.Run()
+	}()
 }
 
 func logf(f string, a ...any) {

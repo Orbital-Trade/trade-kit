@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -186,6 +187,14 @@ func runScan(cfg *strategy.Config, bus *signal.Bus) {
 			sig := buildSignal(eval, cfg)
 			if ok, _ := bus.Add(sig); ok {
 				fmt.Printf("  %-6s  → new signal: %s\n", sym, eval.Reason)
+				sigDir := "BUY"
+				if eval.Action == "exit" { sigDir = "SELL" }
+				notify("--symbol", sig.Symbol, "--signal", sigDir,
+					"--price", fmt.Sprintf("%.2f", sig.EntryLimit),
+					"--stop", fmt.Sprintf("%.2f", sig.Stop),
+					"--qty", fmt.Sprintf("%d", sig.Qty),
+					"--strategy", "earnings",
+					"--note", eval.Reason)
 			}
 		}
 		time.Sleep(400 * time.Millisecond)
@@ -254,6 +263,12 @@ func runExecutor(bus *signal.Bus, db *store.Store, b broker.Broker, cfg *strateg
 			s.EntryOrderID = entryID
 			s.StopOrderID = stopID
 		})
+		notify("--symbol", sig.Symbol, "--signal", "BUY",
+			"--price", fmt.Sprintf("%.2f", sig.EntryLimit),
+			"--stop", fmt.Sprintf("%.2f", sig.Stop),
+			"--qty", fmt.Sprintf("%d", sig.Qty),
+			"--strategy", "earnings",
+			"--note", fmt.Sprintf("order placed: %s", entryID))
 		t := store.Trade{
 			Symbol:       sig.Symbol,
 			EntryPrice:   sig.EntryLimit,
@@ -441,6 +456,20 @@ func abs(x float64) float64 {
 		return -x
 	}
 	return x
+}
+
+// notify shells out to the notifier binary (if present in PATH).
+// Runs in a goroutine so it never blocks the trading loop.
+// Silent if notifier is not installed — stdout-only fallback.
+func notify(args ...string) {
+	path, err := exec.LookPath("notifier")
+	if err != nil {
+		return
+	}
+	go func() {
+		cmd := exec.Command(path, append([]string{"send"}, args...)...)
+		_ = cmd.Run()
+	}()
 }
 
 func fatalf(format string, args ...interface{}) {

@@ -6,6 +6,32 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [0.4.0] — 2026-05-27
+
+### Added
+
+**notifier — Telegram and Discord signal delivery**
+- New `notifier/` tool: delivers trade signals to Telegram and/or Discord
+- `notifier send "<text>"` — free-text message to all configured channels
+- `notifier send --symbol SYM --signal BUY --price P --stop S --target T --qty N --strategy name --note text` — structured signal with formatted output (icon, R:R ratio, %, SGT timestamp)
+- `notifier test` — sends a test message to verify all channels are reachable
+- `notifier status` — shows which channels are configured
+- Config: `notifier/notifier.json` — `telegram_bot_token`, `telegram_chat_id`, `discord_webhook_url`, `enabled`
+- Free tier: no channels configured → signals go to stdout only (no crash, no config required)
+- Paid tier: configure private Telegram channel for subscriber delivery
+- Falls back to `~/.trade-kit/notifier/notifier.json` if local config not found
+- Build: `cd notifier && go build -o notifier ./cmd/`
+
+**Bot integration — all scanner bots now call notifier on signals**
+- `daytrader-bot`: notifies on every new signal written to the bus (scan + run modes) and on trade execution
+- `bounce-bot`: notifies on RSI oversold signal write and on trade execution
+- `earnings-bot`: notifies on ENTER/EXIT signal write (runScan) and on trade execution
+- `index-trader`: notifies when QQQ/VIX signal fires (before semi/live execution)
+- Integration is non-blocking (goroutine) — trading loop never waits on delivery
+- Silent fallback: if `notifier` binary is not found in PATH, bots continue normally with stdout only
+
+---
+
 ## [0.3.1] — 2026-05-25
 
 ### Fixed

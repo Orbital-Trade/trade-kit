@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -111,6 +112,12 @@ func cmdScan(cfg *strategy.Config, bus *signal.Bus, b broker.Broker) {
 			if ok, _ := bus.Add(sig); ok {
 				fmt.Printf("         ✓ signal written (id: %s)\n", sig.ID)
 				added++
+				notify("--symbol", sig.Symbol, "--signal", "BUY",
+					"--price", fmt.Sprintf("%.2f", sig.EntryLimit),
+					"--stop", fmt.Sprintf("%.2f", sig.Stop),
+					"--qty", fmt.Sprintf("%d", sig.Qty),
+					"--strategy", "bounce",
+					"--note", eval.Reason)
 			} else {
 				fmt.Printf("         ─ already queued\n")
 			}
@@ -157,6 +164,12 @@ func runScan(cfg *strategy.Config, bus *signal.Bus) {
 			sig := buildSignal(eval, cfg)
 			if ok, _ := bus.Add(sig); ok {
 				fmt.Printf("  %-6s  RSI %.1f → signal written\n", sym, setup.RSI)
+				notify("--symbol", sig.Symbol, "--signal", "BUY",
+					"--price", fmt.Sprintf("%.2f", sig.EntryLimit),
+					"--stop", fmt.Sprintf("%.2f", sig.Stop),
+					"--qty", fmt.Sprintf("%d", sig.Qty),
+					"--strategy", "bounce",
+					"--note", fmt.Sprintf("RSI %.1f", setup.RSI))
 			}
 		}
 		time.Sleep(400 * time.Millisecond)
@@ -199,6 +212,12 @@ func runExecutor(bus *signal.Bus, db *store.Store, b broker.Broker, cfg *strateg
 			s.EntryOrderID = entryID
 			s.StopOrderID = stopID
 		})
+		notify("--symbol", sig.Symbol, "--signal", "BUY",
+			"--price", fmt.Sprintf("%.2f", sig.EntryLimit),
+			"--stop", fmt.Sprintf("%.2f", sig.Stop),
+			"--qty", fmt.Sprintf("%d", sig.Qty),
+			"--strategy", "bounce",
+			"--note", fmt.Sprintf("order placed: %s", entryID))
 		expires := time.Now().UTC().AddDate(0, 0, cfg.MaxHoldDays)
 		_ = db.Save(store.Trade{
 			Symbol: sig.Symbol, EntryPrice: sig.EntryLimit, EntryRSI: setup.RSI,
@@ -334,6 +353,20 @@ func isMarketHours() bool {
 }
 
 func nowET() string { return time.Now().UTC().Add(-4 * time.Hour).Format("15:04:05 ET") }
+
+// notify shells out to the notifier binary (if present in PATH).
+// Runs in a goroutine so it never blocks the trading loop.
+// Silent if notifier is not installed — stdout-only fallback.
+func notify(args ...string) {
+	path, err := exec.LookPath("notifier")
+	if err != nil {
+		return
+	}
+	go func() {
+		cmd := exec.Command(path, append([]string{"send"}, args...)...)
+		_ = cmd.Run()
+	}()
+}
 
 func abs(x float64) float64 {
 	if x < 0 {
