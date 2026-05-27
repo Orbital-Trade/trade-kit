@@ -64,12 +64,18 @@ func main() {
 		cmdClear(q)
 	case "daemon":
 		logPath := ""
+		allowExec := false
 		for i := 2; i < len(os.Args)-1; i++ {
 			if os.Args[i] == "--log" {
 				logPath = os.Args[i+1]
 			}
 		}
-		cmdDaemon(q, logPath)
+		for _, arg := range os.Args[2:] {
+			if arg == "--allow-exec" {
+				allowExec = true
+			}
+		}
+		cmdDaemon(q, logPath, allowExec)
 	default:
 		usage()
 		os.Exit(1)
@@ -369,7 +375,7 @@ func cmdClear(q *queue.Queue) {
 
 // ─── DAEMON ──────────────────────────────────────────────────────────────────
 
-func cmdDaemon(q *queue.Queue, logPath string) {
+func cmdDaemon(q *queue.Queue, logPath string, allowExec bool) {
 	var logFile *os.File
 	if logPath != "" {
 		var err error
@@ -436,7 +442,7 @@ func cmdDaemon(q *queue.Queue, logPath string) {
 		logf("%d order(s) due — executing", len(due))
 		for _, o := range due {
 			logf("  → %s [%s]", o.Summary(), o.ID)
-			result, execErr := execute(c, o)
+			result, execErr := execute(c, o, allowExec)
 			if execErr != nil {
 				logf("  ❌ FAILED: %v", execErr)
 				_ = q2.SetResult(o.ID, queue.StatusFailed, "", execErr.Error())
@@ -474,7 +480,10 @@ func filterDue(orders []queue.Order, now time.Time) []queue.Order {
 }
 
 // execute submits a queued order to Tiger via the ops package.
-func execute(c ops.Caller, o queue.Order) (string, error) {
+// allowExec must be true for TypeExec orders to run; this prevents arbitrary
+// shell commands from executing unless the operator explicitly opts in via
+// the --allow-exec daemon flag.
+func execute(c ops.Caller, o queue.Order, allowExec bool) (string, error) {
 	switch o.Type {
 	case queue.TypeBuy:
 		var res ops.OrderResult
@@ -553,6 +562,9 @@ func execute(c ops.Caller, o queue.Order) (string, error) {
 		return fmt.Sprintf("cancelled %s", res.Status), nil
 
 	case queue.TypeExec:
+		if !allowExec {
+			return "", fmt.Errorf("exec order blocked — restart daemon with --allow-exec to enable shell commands")
+		}
 		shell := o.Cmd
 		if home, err := os.UserHomeDir(); err == nil {
 			shell = strings.ReplaceAll(shell, "~/", home+"/")
@@ -683,7 +695,7 @@ COMMANDS
   list                              Show all queued and executed orders
   cancel <id>                       Remove a pending order from queue
   clear                             Cancel all pending orders
-  daemon [--log path]               Start execution daemon (blocks)
+  daemon [--log path] [--allow-exec] Start execution daemon (blocks)
 
 ORDER TYPES
   buy  <SYMBOL> <QTY> [--limit price]           Market or limit buy
@@ -692,6 +704,12 @@ ORDER TYPES
   target <SYMBOL> <QTY> --price <price>         New take-profit order
   modify <ORDER_ID> [--stop p] [--limit p] [--qty n]  Modify existing order
   cancel <ORDER_ID>                             Cancel existing Tiger order
+
+DAEMON FLAGS
+  --log <path>   Append execution log to file
+  --allow-exec   Enable TypeExec shell orders (off by default for security)
+                 Only use on trusted machines where queue file access is restricted.
+                 Without this flag, exec orders are queued but blocked at runtime.
 
 WINDOWS (--at flag)
   next_open    US regular session open: 9:30 AM ET / 21:30 SGT  (default)
