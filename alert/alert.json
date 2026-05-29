@@ -1,0 +1,9 @@
+{
+  "poll_interval_sec": 60,
+  "alerts": [
+    { "symbol": "LUNR",  "above": 40.00, "note": "breakout level" },
+    { "symbol": "AAPL",  "below": 170.00, "note": "support breach" },
+    { "symbol": "QQQ",   "above": 480.00 },
+    { "symbol": "SQQQ",  "below": 8.00, "repeat": true }
+  ]
+}
