@@ -121,7 +121,7 @@ func Connect(cfg Config, paper bool) (*Client, error) {
 }
 
 // Close shuts down the connection.
-func (c *Client) Close() { c.conn.Close() }
+func (c *Client) Close() error { return c.conn.Close() }
 
 // IsPaper returns true when in simulation mode.
 func (c *Client) IsPaper() bool { return c.paper }

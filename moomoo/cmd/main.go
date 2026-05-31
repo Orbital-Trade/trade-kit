@@ -126,7 +126,11 @@ func main() {
 		tlog.Error("%v", err)
 		os.Exit(1)
 	}
-	defer c.Close()
+	defer func() {
+		if err := c.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "moomoo: close: %v\n", err)
+		}
+	}()
 	tlog.Info("connected (mode: %s)", map[bool]string{true: "PAPER", false: "LIVE"}[paper])
 
 	cmd := args[0]
