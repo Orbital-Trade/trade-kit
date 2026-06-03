@@ -339,6 +339,9 @@ func loadConfig(path string) (*strategy.Config, error) {
 	if cfg.ScanIntervalSec == 0 {
 		cfg.ScanIntervalSec = 300
 	}
+	if syms := centralWatchlist(); len(syms) > 0 {
+		cfg.Watchlist = syms
+	}
 	return &cfg, nil
 }
 
@@ -394,4 +397,24 @@ Commands:
   close <SYMBOL>    Manual exit
 
 `)
+}
+
+// centralWatchlist loads symbols from ~/.trade-kit/watchlist.json.
+// Returns nil if the file does not exist, leaving the tool-local watchlist intact.
+func centralWatchlist() []string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	data, err := os.ReadFile(home + "/.trade-kit/watchlist.json")
+	if err != nil {
+		return nil
+	}
+	var wl struct {
+		Symbols []string `json:"symbols"`
+	}
+	if err := json.Unmarshal(data, &wl); err != nil {
+		return nil
+	}
+	return wl.Symbols
 }
