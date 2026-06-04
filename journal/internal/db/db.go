@@ -119,12 +119,17 @@ func (d *DB) List(symbol string, days int) ([]Trade, error) {
 	for rows.Next() {
 		var t Trade
 		var filledAt, createdAt string
-		if err := rows.Scan(&t.ID, &t.Symbol, &t.Side, &t.Qty, &t.Price,
+		var err error
+		if err = rows.Scan(&t.ID, &t.Symbol, &t.Side, &t.Qty, &t.Price,
 			&filledAt, &t.Broker, &t.OrderID, &t.Strategy, &t.Note, &createdAt); err != nil {
 			return nil, err
 		}
-		t.FilledAt, _ = time.Parse(time.RFC3339, filledAt)
-		t.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		if t.FilledAt, err = time.Parse(time.RFC3339, filledAt); err != nil {
+			return nil, fmt.Errorf("parse filled_at %q: %w", filledAt, err)
+		}
+		if t.CreatedAt, err = time.Parse(time.RFC3339, createdAt); err != nil {
+			return nil, fmt.Errorf("parse created_at %q: %w", createdAt, err)
+		}
 		trades = append(trades, t)
 	}
 	return trades, rows.Err()

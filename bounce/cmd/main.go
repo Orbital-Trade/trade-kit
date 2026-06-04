@@ -345,8 +345,16 @@ func loadConfig(path string) (*strategy.Config, error) {
 	return &cfg, nil
 }
 
+func etLocation() *time.Location {
+	loc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		return time.FixedZone("EST", -5*60*60)
+	}
+	return loc
+}
+
 func isMarketHours() bool {
-	et := time.Now().UTC().Add(-4 * time.Hour)
+	et := time.Now().In(etLocation())
 	if w := et.Weekday(); w == time.Saturday || w == time.Sunday {
 		return false
 	}
@@ -355,7 +363,7 @@ func isMarketHours() bool {
 	return mins >= 9*60+30 && mins < 16*60
 }
 
-func nowET() string { return time.Now().UTC().Add(-4 * time.Hour).Format("15:04:05 ET") }
+func nowET() string { return time.Now().In(etLocation()).Format("15:04:05 ET") }
 
 // notify shells out to the notifier binary (if present in PATH).
 // Runs in a goroutine so it never blocks the trading loop.

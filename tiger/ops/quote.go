@@ -81,14 +81,20 @@ func yahooQuote(info SymbolInfo) (Quote, error) {
 		ticker = info.Symbol + ".SI"
 	}
 	url := fmt.Sprintf("https://query2.finance.yahoo.com/v8/finance/chart/%s?interval=1d&range=2d", ticker)
-	req, _ := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return Quote{}, fmt.Errorf("yahoo_quote %s: build request: %w", info.Symbol, err)
+	}
 	req.Header.Set("User-Agent", "Mozilla/5.0")
 	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
 	if err != nil {
 		return Quote{}, fmt.Errorf("yahoo_quote %s: %w", info.Symbol, err)
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return Quote{}, fmt.Errorf("yahoo_quote %s: read response: %w", info.Symbol, err)
+	}
 
 	var yr struct {
 		Chart struct {

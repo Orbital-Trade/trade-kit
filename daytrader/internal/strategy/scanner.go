@@ -95,7 +95,11 @@ func computeRVOL(todayVol, adv float64) float64 {
 	if adv <= 0 || todayVol <= 0 {
 		return 0
 	}
-	et := time.Now().UTC().Add(-4 * time.Hour)
+	etLoc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		etLoc = time.FixedZone("EST", -5*60*60)
+	}
+	et := time.Now().In(etLoc)
 	h, m, _ := et.Clock()
 	minsIntoSession := h*60 + m - (9*60 + 30) // minutes since open
 	if minsIntoSession <= 0 {

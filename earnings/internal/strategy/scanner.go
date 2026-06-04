@@ -23,11 +23,17 @@ var (
 
 func ensureSession() {
 	sessionOnce.Do(func() {
-		jar, _ := cookiejar.New(nil)
+		jar, err := cookiejar.New(nil)
+		if err != nil {
+			return // cookiejar.New never fails in practice; if it does, skip crumb
+		}
 		sessionClient = &http.Client{Jar: jar, Timeout: 15 * time.Second}
 
 		// Step 1: visit Yahoo Finance to receive session cookies.
-		req, _ := http.NewRequest("GET", "https://finance.yahoo.com", nil)
+		req, err := http.NewRequest("GET", "https://finance.yahoo.com", nil)
+		if err != nil {
+			return
+		}
 		req.Header.Set("User-Agent", userAgent)
 		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 		if resp, err := sessionClient.Do(req); err == nil {
@@ -35,12 +41,18 @@ func ensureSession() {
 		}
 
 		// Step 2: fetch the crumb using the session cookies.
-		req, _ = http.NewRequest("GET", "https://query2.finance.yahoo.com/v1/test/getcrumb", nil)
+		req, err = http.NewRequest("GET", "https://query2.finance.yahoo.com/v1/test/getcrumb", nil)
+		if err != nil {
+			return
+		}
 		req.Header.Set("User-Agent", userAgent)
 		req.Header.Set("Accept", "application/json")
 		if resp, err := sessionClient.Do(req); err == nil {
-			b, _ := io.ReadAll(resp.Body)
+			b, readErr := io.ReadAll(resp.Body)
 			resp.Body.Close()
+			if readErr != nil {
+				return
+			}
 			crumb := strings.TrimSpace(string(b))
 			// Crumb is valid if it doesn't look like a JSON error
 			if !strings.Contains(crumb, "Unauthorized") && len(crumb) > 0 {

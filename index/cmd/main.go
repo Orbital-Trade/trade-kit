@@ -44,7 +44,11 @@ func main() {
 
 	for {
 		now := time.Now()
-		et := now.UTC().Add(-4 * time.Hour)
+		etLoc, _ := time.LoadLocation("America/New_York")
+		if etLoc == nil {
+			etLoc = time.FixedZone("EST", -5*60*60)
+		}
+		et := now.In(etLoc)
 		h, m, _ := et.Clock()
 		minsIntoSession := h*60 + m - (9*60 + 30)
 
@@ -72,7 +76,13 @@ func main() {
 
 		// Monitor open position
 		if pos != nil {
-			tqqqQ, _ := strategy.FetchQuote(pos.Symbol)
+			tqqqQ, qErr := strategy.FetchQuote(pos.Symbol)
+			if qErr != nil {
+				logf("quote %s: %v — skipping position check", pos.Symbol, qErr)
+				fmt.Println()
+				sleep(cfg.ScanIntervalSec)
+				continue
+			}
 			pnl := pos.PnL(tqqqQ.Price)
 			pnlPct := pos.PnLPct(tqqqQ.Price)
 			fmt.Printf("  |  %s %dsh @ $%.2f  P&L: $%.2f (%+.2f%%)",
@@ -143,7 +153,10 @@ func main() {
 			if err := executeBuy(sig.Symbol, sig.Shares); err != nil {
 				logf("buy failed: %v", err)
 			} else {
-				tqqqQ, _ := strategy.FetchQuote(sig.Symbol)
+				tqqqQ, qErr := strategy.FetchQuote(sig.Symbol)
+				if qErr != nil {
+					logf("quote after buy %s: %v", sig.Symbol, qErr)
+				}
 				pos = &strategy.Position{
 					Symbol:     sig.Symbol,
 					Shares:     sig.Shares,
@@ -230,7 +243,7 @@ func notify(args ...string) {
 }
 
 func logf(f string, a ...any) {
-	fmt.Printf("  [ERR] "+f+"\n", a...)
+	fmt.Fprintf(os.Stderr, "  [ERR] "+f+"\n", a...)
 }
 
 func fatalf(f string, a ...any) {
