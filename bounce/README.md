@@ -91,6 +91,31 @@ bounce-bot --signals ~/signals.json run
 
 Stored in `bounce-trades.json`. Includes entry RSI, target RSI, and expiry date.
 
+## Examples
+
+```bash
+# Scan the watchlist for RSI oversold signals (paper mode)
+bounce-bot scan
+
+# Start continuous scan and execute loop in semi-auto
+bounce-bot --semi run
+
+# Start fully automatic (requires live broker credentials)
+bounce-bot --live run
+
+# Check the signal bus for pending and active signals
+bounce-bot monitor
+
+# Check open positions and closed P&L
+bounce-bot status
+
+# Manually exit an open position at market
+bounce-bot close MCK
+
+# Use a custom config and shared signal bus
+bounce-bot --config ~/my-bounce.json --signals ~/signals.json scan
+```
+
 ## Architecture
 
 ```

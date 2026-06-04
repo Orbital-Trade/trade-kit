@@ -98,6 +98,31 @@ Filled positions are stored in `earnings-trades.json` in the working directory.
 | QUBT | May 11, 2026 | May 8–10 |
 | NVDA | May 20, 2026 | May 17–19 |
 
+## Examples
+
+```bash
+# Scan the watchlist for upcoming earnings plays (paper mode)
+earnings-bot scan
+
+# Start continuous scan and execute loop in semi-auto
+earnings-bot --semi run
+
+# Start fully automatic (requires live broker credentials)
+earnings-bot --live run
+
+# Check the signal bus for active signals
+earnings-bot monitor
+
+# Check open positions and closed P&L
+earnings-bot status
+
+# Manually exit an open position at market
+earnings-bot close NVDA
+
+# Use a custom config and shared signal bus
+earnings-bot --config ~/my-earnings.json --signals ~/signals.json scan
+```
+
 ## Architecture
 
 ```

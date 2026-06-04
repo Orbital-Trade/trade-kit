@@ -221,7 +221,7 @@ The `Caller` interface is the only contract between the ops layer and any transp
 
 ---
 
-## Credentials
+## Configuration
 
 Credentials are loaded automatically from the project's existing Tiger config files:
 
@@ -239,3 +239,40 @@ brokers/Tiger/tiger_openapi_config.properties
 ```
 
 The client searches for credentials in `./brokers/Tiger/`, `../../brokers/Tiger/`, or `$HOME/.trade-kit/tiger/`.
+
+## Examples
+
+```bash
+# Check account and open positions
+tiger-cli account
+tiger-cli positions
+
+# Get a real-time price quote
+tiger-cli quote AAPL
+
+# Limit buy with stop-loss and take-profit in one command (paper mode)
+tiger-cli buy NOK 100 --limit 4.50 --stop 4.20 --target 5.00
+
+# Live limit buy — prints order details and prompts y/N before sending
+tiger-cli --live buy NOK 100 --limit 4.50 --stop 4.20
+
+# Live market sell
+tiger-cli --live sell NOK 100
+
+# Cancel an open order
+tiger-cli --live cancel 123456789
+
+# Modify a stop price in-place (no cancel + replace)
+tiger-cli --live modify 123456789 --stop 4.10
+
+# Futures: enter a long MES position with protective stop
+tiger-cli --live futures entry MES long 1 --entry 5100 --stop 5090
+
+# Multi-timeframe technical analysis
+tiger-cli analyze AAPL
+tiger-cli --json analyze AAPL
+
+# Markov regime model — state probabilities and directional signal
+tiger-cli markov NVDA
+tiger-cli --json markov NVDA
+```

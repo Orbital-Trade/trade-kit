@@ -104,6 +104,34 @@ AMD  +26.3%  — too extended, skip
 TSLA +9.6%   — valid, wait for entry window
 ```
 
+## Examples
+
+```bash
+# Pre-market scan at 9:20 AM ET — identify gap candidates
+daytrader-bot scan
+
+# Scan with earnings mode — tighter params, allows shorts on gap-downs
+daytrader-bot --earnings scan
+
+# Start the continuous loop in semi-auto (recommended for live trading)
+daytrader-bot --semi run
+
+# Start fully automatic — PDT-exempt accounts only
+daytrader-bot --live run
+
+# Check the signal bus for active signals
+daytrader-bot monitor
+
+# Check open and closed trades with P&L
+daytrader-bot status
+
+# Manually exit a position at market
+daytrader-bot close NVDA
+
+# Use a custom config file
+daytrader-bot --config ~/my-daytrader.json scan
+```
+
 ## Architecture
 
 ```
