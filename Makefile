@@ -1,4 +1,4 @@
-TOOLS := tiger moomoo scheduler daytrader earnings bounce index notifier alert journal options
+TOOLS := tiger moomoo scheduler daytrader earnings bounce index notifier alert journal options backtest
 
 .PHONY: all clean test $(TOOLS)
 
@@ -37,6 +37,9 @@ journal:
 options:
 	cd options   && go build -o options      ./cmd/
 
+backtest:
+	cd backtest  && go build -o backtest     ./cmd/
+
 test:
 	cd tiger && go test ./...
 
@@ -52,3 +55,4 @@ clean:
 	rm -f alert/alert
 	rm -f journal/journal
 	rm -f options/options
+	rm -f backtest/backtest
