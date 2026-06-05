@@ -1,0 +1,21 @@
+{
+  "data_source": "yahoo",
+  "api_key": "",
+  "default_budget": 200.0,
+  "strategies": {
+    "daytrader": {
+      "gap_min_pct": 3.0,
+      "gap_max_pct": 20.0,
+      "stop_pct": 2.0,
+      "rr_min": 3.0,
+      "budget": 200.0
+    },
+    "bounce": {
+      "rsi_threshold": 30.0,
+      "rsi_exit": 50.0,
+      "stop_pct": 5.0,
+      "max_hold_days": 5,
+      "budget": 200.0
+    }
+  }
+}
