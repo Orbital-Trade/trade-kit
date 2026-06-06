@@ -6,6 +6,101 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [0.5.0] — 2026-06-06
+
+### Added
+
+**alert — price threshold alert daemon**
+- New `alert/` tool: watches a symbol list and fires notifications when price crosses configured thresholds
+- `alert daemon` — polls continuously (configurable interval), fires once per threshold cross (or every poll if `"repeat": true`)
+- `alert check` — one-shot check; print triggered alerts and exit
+- `alert list` — show configured thresholds alongside live prices
+- Config: `alert/alert.json` — symbols with `above`/`below` thresholds, `poll_interval_sec`, `repeat` flag
+- Integrates with `notifier` for Telegram/Discord delivery; falls back to stdout if notifier not in PATH
+- Build: `cd alert && go build -o alert ./cmd/`
+
+**journal — SQLite trade journal**
+- New `journal/` tool: records fills into a local SQLite database with FIFO P&L reporting
+- `journal add BUY|SELL <SYMBOL> <QTY> <PRICE>` — record a trade manually
+- `journal list [--symbol SYM] [--days N]` — filterable trade history
+- `journal pnl [--symbol SYM]` — realized P&L per symbol (FIFO cost basis) with win/loss counts
+- Duplicate broker order IDs silently ignored (partial unique index — only enforced when `order_id` is set)
+- Pure-Go SQLite via `modernc.org/sqlite` — no CGO, no system dependencies
+- Database: `~/.trade-kit/journal/trades.db`
+- Build: `cd journal && go build -o journal ./cmd/`
+
+**options — options chain viewer**
+- New `options/` tool: displays calls and puts for any US optionable stock using Yahoo Finance
+- `options chain <SYMBOL>` — nearest expiry chain (calls + puts)
+- `options chain <SYMBOL> --expiry YYYY-MM-DD --calls|--puts --json` — filtered output
+- `options expiries <SYMBOL>` — list all available expiry dates with DTE
+- Handles Yahoo Finance session auth (fc.yahoo.com cookie + crumb) internally — no API key required
+- Near-the-money rows highlighted with `>`, ITM contracts flagged with `*`
+- Build: `cd options && go build -o options ./cmd/`
+
+**backtest — historical strategy validation**
+- New `backtest/` tool: replays strategies against historical OHLCV data and produces a performance report
+- `backtest run --strategy daytrader|bounce --symbol SYM --from YYYY-MM-DD [--to YYYY-MM-DD] [--json]`
+- Report: total trades, win rate, avg win/loss, max drawdown, max consecutive losses, full trade log
+- Strategies: `daytrader` (gap-up momentum with stop/target), `bounce` (RSI oversold entry, max-hold exit)
+- Data sources: Yahoo Finance (default, no key), Alpha Vantage (free tier), Polygon.io (free tier)
+- Source selected via `"data_source"` in `backtest.json`; strategy parameters fully configurable
+- Build: `cd backtest && go build -o backtest ./cmd/`
+
+**watchlist — central symbol list**
+- `watchlist.json` at repo root and `~/.trade-kit/watchlist.json` as shared symbol source
+- `daytrader-bot`, `bounce-bot`, and `earnings-bot` all check for the central file at startup
+- Falls back silently to tool-local config when central file is absent — no breaking change
+
+**Makefile**
+- `make all` — builds all 12 tools in one command
+- `make <tool>` — build individual tool (tiger, moomoo, scheduler, etc.)
+- `make test` — runs the tiger test suite
+- `make clean` — removes all compiled binaries
+
+**Per-tool README.md files**
+- Every tool directory now has a README covering build, config reference, commands/flags, and examples
+- 7 new READMEs: moomoo, scheduler, index, notifier, alert, journal, options
+- 4 updated READMEs: tiger, daytrader, earnings, bounce (added examples sections)
+
+### Fixed
+
+**scheduler: TypeExec shell injection mitigation**
+- `scheduler daemon` now blocks TypeExec orders by default
+- Pass `--allow-exec` to opt in; without it, exec orders fail with a clear error message
+- Prevents arbitrary shell commands from running if the queue file is written by an untrusted source
+
+**moomoo: connection close error no longer silently dropped**
+- `Close()` now returns the `net.Conn` error
+- `defer c.Close()` in main logs any close failure to stderr
+
+**DST bug: hardcoded UTC-4 offset replaced in daytrader, bounce, index**
+- `daytrader/internal/strategy/scanner.go`, `bounce/cmd/main.go`, `index/cmd/main.go` all used `UTC().Add(-4 * time.Hour)` (EDT only)
+- Replaced with `time.LoadLocation("America/New_York")` — now handles EST/EDT transitions automatically
+- Matches the fix applied to `scheduler` in v0.3.1 (OTK-1)
+
+**tiger/ops/quote.go: errors silently swallowed in yahooQuote()**
+- `http.NewRequest` error was ignored (nil request → panic in `http.Client.Do`)
+- `io.ReadAll` error was ignored (empty body → opaque JSON parse failure)
+- Both errors now returned to caller with context
+
+**index-trader: P&L calculated as zero on quote fetch failure**
+- `FetchQuote(pos.Symbol)` errors were discarded with `_`
+- A failed quote returned a zero-value `Quote{}`, making stop/target checks never trigger
+- Now logs the error and skips the position check for that tick
+
+**index-trader: logf() was writing to stdout instead of stderr**
+- Daemon error logs now go to stderr, consistent with all other tools
+
+**journal: timestamp parse errors produce silent zero-value dates**
+- `time.Parse` errors on `filled_at` and `created_at` are now returned to the caller
+- Previously a malformed date stored in the DB would silently produce a year-0001 timestamp
+
+**earnings/strategy: http.NewRequest and io.ReadAll errors dropped in session setup**
+- `ensureSession()` now checks all errors and returns early; crumb degrades gracefully to empty
+
+---
+
 ## [0.4.0] — 2026-05-27
 
 ### Added
