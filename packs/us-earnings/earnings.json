@@ -1,0 +1,22 @@
+{
+  "_pack": "US Earnings Pack",
+  "_description": "Liquid US large-caps with regular, market-moving earnings. Tuned for the earnings-bot pre-announcement run-up strategy. Update earnings_dates each quarter (free source: nasdaq.com/market-activity/earnings).",
+  "days_before": 3,
+  "stop_pct": 5.0,
+  "target_pct": 0.0,
+  "budget": 200.0,
+  "min_adv": 1000000.0,
+  "min_price": 5.0,
+  "max_run_pct": 20.0,
+  "watchlist": [
+    "AAPL", "MSFT", "NVDA", "AMD", "META", "AMZN", "GOOGL",
+    "TSLA", "NFLX", "CRM", "AVGO", "MU", "ORCL", "ADBE"
+  ],
+  "scan_interval_sec": 300,
+  "earnings_dates": {
+    "_comment": "Refresh quarterly — these are placeholders. Format: TICKER: YYYY-MM-DD (announcement date).",
+    "NVDA": "2026-08-26",
+    "AAPL": "2026-07-30",
+    "MSFT": "2026-07-28"
+  }
+}

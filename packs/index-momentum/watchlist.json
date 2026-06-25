@@ -1,0 +1,6 @@
+{
+  "_pack": "Index Momentum Pack",
+  "_description": "Instruments referenced by the index-momentum strategy. QQQ/^VIX are signal inputs; TQQQ/SQQQ are the traded instruments.",
+  "_market": "US",
+  "symbols": ["QQQ", "TQQQ", "SQQQ", "^VIX"]
+}

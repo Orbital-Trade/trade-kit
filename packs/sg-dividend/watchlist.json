@@ -1,0 +1,11 @@
+{
+  "_pack": "SG Dividend Pack",
+  "_description": "SGX blue-chip dividend payers and large-cap S-REITs for income-focused, long-term holding. Use with `alert` (price/threshold monitoring), `journal` (track positions), or `controller` (portfolio risk). SGX ticker codes — works with the tiger and moomoo CLIs.",
+  "_market": "SGX",
+  "symbols": [
+    "D05", "O39", "U11",
+    "Z74", "C6L", "F34",
+    "C38U", "A17U", "M44U", "N2IU", "ME8U", "K71U", "J69U", "BUOU",
+    "ES3"
+  ]
+}

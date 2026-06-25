@@ -23,7 +23,25 @@ Built for retail traders in Singapore, Hong Kong, and the US who want to automat
 | [index](#7-index-trader) | `index-trader` | Index momentum — QQQ/VIX signals for TQQQ/SQQQ |
 | [controller](#8-controller) | `controller` | Portfolio risk manager — circuit breaker, NAV, signal gate |
 
-Jump to: [Setup](#setup) · [Workflows](#workflow-playbooks) · [Signal bus](#the-signal-bus) · [Troubleshooting](#troubleshooting)
+Jump to: [Setup](#setup) · [Strategy packs](#strategy-packs) · [Workflows](#workflow-playbooks) · [Signal bus](#the-signal-bus) · [Troubleshooting](#troubleshooting) · [Support this project](#support-this-project)
+
+---
+
+## Strategy packs
+
+Ready-to-use config + watchlist bundles so you don't start from a blank file. Copy one, point a bot at it, and tune from there.
+
+| Pack | For | Strategy |
+|---|---|---|
+| [SG Dividend](packs/sg-dividend/) | `alert`, `journal`, `controller` | SGX blue-chip dividend payers + large-cap S-REITs — income, long-term hold |
+| [US Earnings](packs/us-earnings/) | `earnings-bot` | Liquid US large-caps — pre-announcement run-up |
+| [Index Momentum](packs/index-momentum/) | `index-trader` | QQQ trend + VIX regime → TQQQ/SQQQ |
+
+```bash
+earnings-bot --config packs/us-earnings/earnings.json
+```
+
+See [packs/](packs/) for details.
 
 ---
 
@@ -1155,12 +1173,37 @@ Current version: **v0.3.1**
 
 ---
 
-## Broker sign-up
+## Support this project
 
-If trade-kit is useful, consider signing up through these links:
+trade-kit is free and MIT-licensed. If it's useful, here's how to support it — at no cost to you:
 
-- **Tiger Brokers** — [Sign up](https://www.itiger.com/sg/invite) (up to S$1,000 welcome rewards for new accounts)
-- **Moomoo** — [Sign up](https://www.moomoo.com/sg) (free stocks for new accounts)
+### Open a broker account through a referral link
+
+Both brokers trade-kit talks to run referral programs with welcome rewards for you and a credit for the project.
+
+<!-- TODO (maintainer): paste your OWN full personal referral link into each [Sign up](...) below.
+     These programs give you a complete unique link — there is no short "code" to append.
+       Tiger (SG):  Tiger Trade app → Rewards Centre → Refer Friends → copy your invite link.
+                    (Tiger also has an "invitation code" field at signup if you prefer to share a code.
+                     For CPA commissions, apply to the Tiger Brokers SG Affiliate Program via Commission Factory.)
+       Moomoo (SG): log in at https://www.moomoo.com/sg/events/referral → copy your link
+                    (format: https://j.moomoo.com/XXXXXX — the link itself is the identifier). -->
+
+- **Tiger Brokers (SG)** — [Sign up](https://www.tigerbrokers.com.sg) · up to S$1,000 in welcome rewards for new accounts
+- **Moomoo (SG)** — [Sign up](https://www.moomoo.com/sg) · free stocks + cash coupons for new accounts
+
+> The links above point to each broker's **public homepage** as a safe default. Swap in your own personal referral link (see the comment in this file) to earn the referral credit — there's no code to paste, the whole link is unique to you. Promotions vary by region and change over time; check each broker's current terms.
+
+### Sponsor on GitHub
+
+If trade-kit saves you time, consider [sponsoring on GitHub](https://github.com/sponsors/jpramirez). Sponsorship funds new bots, broker integrations, and pre-built binaries.
+
+### Use the hosted platform
+
+trade-kit is the open-source core of [**OrbitalTrade**](https://trade.orbitalpay.ai) — a hosted trading-intelligence platform with AI-generated theses, a live multi-market scanner (US/SGX/HK), a copilot, and a browser extension.
+
+- 🧩 [OrbitalTrade for Chrome](https://chromewebstore.google.com/detail/orbitaltrade/kfndmcgcalllbgjiebgjhmefhfoiimde) — free
+- 🌐 [trade.orbitalpay.ai](https://trade.orbitalpay.ai) — free tools, blog, and paid tiers for higher limits
 
 ---
 
