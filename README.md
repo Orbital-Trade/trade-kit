@@ -1181,18 +1181,8 @@ trade-kit is free and MIT-licensed. If it's useful, here's how to support it —
 
 Both brokers trade-kit talks to run referral programs with welcome rewards for you and a credit for the project.
 
-<!-- TODO (maintainer): paste your OWN full personal referral link into each [Sign up](...) below.
-     These programs give you a complete unique link — there is no short "code" to append.
-       Tiger (SG):  Tiger Trade app → Rewards Centre → Refer Friends → copy your invite link.
-                    (Tiger also has an "invitation code" field at signup if you prefer to share a code.
-                     For CPA commissions, apply to the Tiger Brokers SG Affiliate Program via Commission Factory.)
-       Moomoo (SG): log in at https://www.moomoo.com/sg/events/referral → copy your link
-                    (format: https://j.moomoo.com/XXXXXX — the link itself is the identifier). -->
-
-- **Tiger Brokers (SG)** — [Sign up](https://www.tigerbrokers.com.sg) · up to S$1,000 in welcome rewards for new accounts
-- **Moomoo (SG)** — [Sign up](https://www.moomoo.com/sg) · free stocks + cash coupons for new accounts
-
-> The links above point to each broker's **public homepage** as a safe default. Swap in your own personal referral link (see the comment in this file) to earn the referral credit — there's no code to paste, the whole link is unique to you. Promotions vary by region and change over time; check each broker's current terms.
+- **Tiger Brokers (SG)** — [Sign up with code F3MUAJ](https://www.tigerbrokers.com.sg/?invite=F3MUAJ) · up to S$1,000 in welcome rewards for new accounts
+- **Moomoo (SG)** — [Sign up](https://j.moomoo.com/0CXYTY) · free stocks + cash coupons for new accounts
 
 ### Charts & analysis
 
