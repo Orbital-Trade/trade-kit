@@ -23,7 +23,25 @@ Built for retail traders in Singapore, Hong Kong, and the US who want to automat
 | [index](#7-index-trader) | `index-trader` | Index momentum — QQQ/VIX signals for TQQQ/SQQQ |
 | [controller](#8-controller) | `controller` | Portfolio risk manager — circuit breaker, NAV, signal gate |
 
-Jump to: [Setup](#setup) · [Workflows](#workflow-playbooks) · [Signal bus](#the-signal-bus) · [Troubleshooting](#troubleshooting)
+Jump to: [Setup](#setup) · [Strategy packs](#strategy-packs) · [Workflows](#workflow-playbooks) · [Signal bus](#the-signal-bus) · [Troubleshooting](#troubleshooting) · [Support this project](#support-this-project)
+
+---
+
+## Strategy packs
+
+Ready-to-use config + watchlist bundles so you don't start from a blank file. Copy one, point a bot at it, and tune from there.
+
+| Pack | For | Strategy |
+|---|---|---|
+| [SG Dividend](packs/sg-dividend/) | `alert`, `journal`, `controller` | SGX blue-chip dividend payers + large-cap S-REITs — income, long-term hold |
+| [US Earnings](packs/us-earnings/) | `earnings-bot` | Liquid US large-caps — pre-announcement run-up |
+| [Index Momentum](packs/index-momentum/) | `index-trader` | QQQ trend + VIX regime → TQQQ/SQQQ |
+
+```bash
+earnings-bot --config packs/us-earnings/earnings.json
+```
+
+See [packs/](packs/) for details.
 
 ---
 
@@ -34,7 +52,7 @@ Jump to: [Setup](#setup) · [Workflows](#workflow-playbooks) · [Signal bus](#th
 Requires Go 1.21+.
 
 ```bash
-git clone https://github.com/jpramirez/trade-kit
+git clone https://github.com/Orbital-Trade/trade-kit
 cd trade-kit
 
 # Build a single tool
@@ -1155,12 +1173,31 @@ Current version: **v0.3.1**
 
 ---
 
-## Broker sign-up
+## Support this project
 
-If trade-kit is useful, consider signing up through these links:
+trade-kit is free and MIT-licensed. If it's useful, here's how to support it — at no cost to you:
 
-- **Tiger Brokers** — [Sign up](https://www.itiger.com/sg/invite) (up to S$1,000 welcome rewards for new accounts)
-- **Moomoo** — [Sign up](https://www.moomoo.com/sg) (free stocks for new accounts)
+### Open a broker account through a referral link
+
+Both brokers trade-kit talks to run referral programs with welcome rewards for you and a credit for the project.
+
+- **Tiger Brokers (SG)** — [Sign up with code F3MUAJ](https://www.tigerbrokers.com.sg/?invite=F3MUAJ) · up to S$1,000 in welcome rewards for new accounts
+- **Moomoo (SG)** — [Sign up](https://j.moomoo.com/0CXYTY) · free stocks + cash coupons for new accounts
+
+### Charts & analysis
+
+- **TradingView** — [Get started](https://www.tradingview.com/?aff_id=168034&source=trade-kit) · the charting platform most trade-kit users already rely on. New users get a $15 coupon toward any plan.
+
+### Sponsor on GitHub
+
+If trade-kit saves you time, consider [sponsoring on GitHub](https://github.com/sponsors/Orbital-Trade). Sponsorship funds new bots, broker integrations, and pre-built binaries.
+
+### Use the hosted platform
+
+trade-kit is the open-source core of [**OrbitalTrade**](https://trade.orbitalpay.ai) — a hosted trading-intelligence platform with AI-generated theses, a live multi-market scanner (US/SGX/HK), a copilot, and a browser extension.
+
+- 🧩 [OrbitalTrade for Chrome](https://chromewebstore.google.com/detail/orbitaltrade/kfndmcgcalllbgjiebgjhmefhfoiimde) — free
+- 🌐 [trade.orbitalpay.ai](https://trade.orbitalpay.ai) — free tools, blog, and paid tiers for higher limits
 
 ---
 

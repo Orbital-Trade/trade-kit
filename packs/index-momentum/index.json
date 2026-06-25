@@ -1,0 +1,16 @@
+{
+  "_pack": "Index Momentum Pack",
+  "_description": "QQQ trend + VIX regime signal driving leveraged TQQQ/SQQQ entries. Tuned for the index-trader bot. Conservative defaults — widen thresholds for more trades, tighten for fewer.",
+  "qqq_long_threshold": 0.3,
+  "qqq_short_threshold": -0.3,
+  "vix_max": 25.0,
+  "vix_spike_min": 20.0,
+  "budget": 200.0,
+  "tqqq_shares": 2,
+  "sqqq_shares": 4,
+  "stop_pct": 5.0,
+  "target_pct": 6.0,
+  "grace_period_min": 10,
+  "exit_by_min": 750,
+  "scan_interval_sec": 30
+}

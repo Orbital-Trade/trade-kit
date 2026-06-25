@@ -1,0 +1,15 @@
+# GitHub Sponsors / funding config for trade-kit.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+#
+# SETUP TODO:
+#   1. Enable GitHub Sponsors for the account: https://github.com/sponsors
+#      (Set up GitHub Sponsors → add bank account + Stripe. Approval is usually instant.)
+#   2. Once approved, the `github:` line below activates the "Sponsor" button.
+#   3. The custom links point at OrbitalTrade — the hosted platform built on this toolkit.
+
+github: [Orbital-Trade]
+
+# Up to 4 custom URLs. These cross-promote the hosted product and broker sign-ups.
+custom:
+  - "https://trade.orbitalpay.ai"
+  - "https://chromewebstore.google.com/detail/orbitaltrade/kfndmcgcalllbgjiebgjhmefhfoiimde"
