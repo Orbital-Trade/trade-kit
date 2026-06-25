@@ -1,8 +1,18 @@
+[![Go 1.21+](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Orbital-Trade/trade-kit)](https://github.com/Orbital-Trade/trade-kit/releases)
+[![Stars](https://img.shields.io/github/stars/Orbital-Trade/trade-kit?style=social)](https://github.com/Orbital-Trade/trade-kit)
+
 # trade-kit
 
 **The open-source CLI trading toolkit for Tiger Brokers and Moomoo.**
 
 Zero dependencies. Paper mode by default. Go binaries — download and run.
+
+- **8 tools** — broker CLIs, 4 scanner bots, scheduler, portfolio risk controller
+- **Paper mode by default** — nothing touches your broker until you pass `--live`
+- **Shared signal bus** — bots coordinate via a single `signals.json` file
+- **Strategy packs** — pre-built configs for dividends, earnings, index scalps
 
 Built for retail traders in Singapore, Hong Kong, and the US who want to automate their workflow without writing code.
 
@@ -47,24 +57,19 @@ See [packs/](packs/) for details.
 
 ## Setup
 
-### Build from source
-
-Requires Go 1.21+.
+### Quick start
 
 ```bash
 git clone https://github.com/Orbital-Trade/trade-kit
 cd trade-kit
-
-# Build a single tool
-cd tiger && go build -o tiger-cli ./cmd/
-
-# Or build everything at once
-for d in tiger moomoo scheduler daytrader earnings bounce controller index; do
-  (cd $d && go build -o ../${d} ./cmd/)
-done
+make all          # builds every tool
+./tiger-cli --help
 ```
 
-### Tiger credentials
+Requires Go 1.21+. Each tool compiles to a single binary with zero external dependencies.
+
+<details>
+<summary><strong>Tiger Brokers credentials</strong></summary>
 
 1. Apply for Tiger Open API access at [openapi.tigersecurities.com](https://openapi.tigersecurities.com)
 2. Download your RSA key pair from the developer portal
@@ -83,7 +88,10 @@ TRADE_PASSWORD=<your 6-digit trade PIN>
 ./tiger-cli --live positions  # your real account
 ```
 
-### Moomoo credentials
+</details>
+
+<details>
+<summary><strong>Moomoo credentials</strong></summary>
 
 1. Download and start [Futu OpenD](https://www.futunn.com/download/OpenD) — it runs as a local daemon on port 11111
 2. Create `~/.trade-kit/moomoo/.env`:
@@ -101,6 +109,8 @@ ACC_ID=<your account ID>
 futu-opend &              # start OpenD in background
 ./moomoo-cli positions    # paper mode
 ```
+
+</details>
 
 ---
 
@@ -1169,7 +1179,7 @@ TIGER_LOG_LEVEL=debug ./tiger-cli quote AAPL
 
 Semantic versioning. See [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v0.3.1**
+Current version: **v0.5.0**
 
 ---
 
