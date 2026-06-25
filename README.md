@@ -52,7 +52,7 @@ See [packs/](packs/) for details.
 Requires Go 1.21+.
 
 ```bash
-git clone https://github.com/jpramirez/trade-kit
+git clone https://github.com/Orbital-Trade/trade-kit
 cd trade-kit
 
 # Build a single tool
@@ -1196,7 +1196,7 @@ Both brokers trade-kit talks to run referral programs with welcome rewards for y
 
 ### Sponsor on GitHub
 
-If trade-kit saves you time, consider [sponsoring on GitHub](https://github.com/sponsors/jpramirez). Sponsorship funds new bots, broker integrations, and pre-built binaries.
+If trade-kit saves you time, consider [sponsoring on GitHub](https://github.com/sponsors/Orbital-Trade). Sponsorship funds new bots, broker integrations, and pre-built binaries.
 
 ### Use the hosted platform
 
