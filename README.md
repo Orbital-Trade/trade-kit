@@ -1194,6 +1194,10 @@ Both brokers trade-kit talks to run referral programs with welcome rewards for y
 
 > The links above point to each broker's **public homepage** as a safe default. Swap in your own personal referral link (see the comment in this file) to earn the referral credit — there's no code to paste, the whole link is unique to you. Promotions vary by region and change over time; check each broker's current terms.
 
+### Charts & analysis
+
+- **TradingView** — [Get started](https://www.tradingview.com/?aff_id=168034&source=trade-kit) · the charting platform most trade-kit users already rely on. New users get a $15 coupon toward any plan.
+
 ### Sponsor on GitHub
 
 If trade-kit saves you time, consider [sponsoring on GitHub](https://github.com/sponsors/Orbital-Trade). Sponsorship funds new bots, broker integrations, and pre-built binaries.
