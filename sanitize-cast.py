@@ -11,55 +11,60 @@ This script does string replacement on sensitive patterns.
 
 import re
 import sys
-import json
 
-# ── Patterns to sanitize ────────────────────────────────────────────────────
+# ── Static replacements (add real values before recording) ───────────────────
 
 REPLACEMENTS = {
-    # Account IDs / API keys (add your real values here before running)
-    # "REAL_TIGER_ID": "20150000",
-    # "REAL_ACCOUNT": "50390000",
-    # "real_api_key_here": "etoro_api_key_xxxxx",
-    # "real_user_key_here": "etoro_user_key_xxxxx",
-
-    # Common system paths
+    # System paths
     "/home/jramirez": "/home/trader",
     "jramirez": "trader",
 
-    # Auth tokens from demo
-    "demo_token_12345": "xxxxx_demo_token",
+    # Tiger account (replace with your real values)
+    "50392935": "XXXXXXXX",
+    "20158945": "XXXXXXXX",
 
-    # IP addresses (private ranges OK, but sanitize just in case)
-    "127.0.0.1:19091": "127.0.0.1:19090",
+    # Demo tokens
+    "demo_token_12345": "xxxxx",
 }
 
-# Regex patterns to catch anything the static replacements miss
+# ── Regex patterns ───────────────────────────────────────────────────────────
+
 REGEX_PATTERNS = [
+    # Tiger account numbers (8 digits in "account: NNNNNNNN" context)
+    (r'account:\s*\d{8}', 'account: XXXXXXXX'),
     # API keys (ot_xxxx format)
     (r'ot_[a-zA-Z0-9]{10,}', 'ot_xxxxxxxxxxxxx'),
-    # UUIDs (request IDs, etc.)
-    # (r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'),
-    # RSA private keys (base64 blobs)
-    (r'-----BEGIN[A-Z ]+KEY-----[A-Za-z0-9+/=\s]+-----END[A-Z ]+KEY-----', '-----BEGIN PRIVATE KEY-----\nXXXXX_REDACTED\n-----END PRIVATE KEY-----'),
+    # RSA private keys
+    (r'-----BEGIN[A-Z ]+KEY-----[\s\S]*?-----END[A-Z ]+KEY-----', '-----BEGIN PRIVATE KEY-----\\nREDACTED\\n-----END PRIVATE KEY-----'),
     # Telegram bot tokens
     (r'\d{9,}:[A-Za-z0-9_-]{30,}', 'XXXXXXXXX:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'),
     # Discord webhook URLs
     (r'https://discord\.com/api/webhooks/\d+/[A-Za-z0-9_-]+', 'https://discord.com/api/webhooks/XXXXX/XXXXX'),
     # Email addresses
     (r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', 'user@example.com'),
+    # IP:port combos (except localhost standard ones)
+    (r'\b(?!127\.0\.0\.1)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+\b', 'X.X.X.X:XXXX'),
+    # Trade passwords (6-digit PINs in context)
+    (r'TRADE_PASSWORD=\d+', 'TRADE_PASSWORD=XXXXXX'),
+    # Private key base64 blobs (long base64 strings)
+    (r'PRIVATE_KEY=[A-Za-z0-9+/=]{40,}', 'PRIVATE_KEY=REDACTED'),
+    (r'private_key_pk8=[A-Za-z0-9+/=]{40,}', 'private_key_pk8=REDACTED'),
 ]
 
-# Patterns to verify are absent after sanitization
+# ── Verify patterns (must be absent after sanitization) ──────────────────────
+
 VERIFY_PATTERNS = [
     r'jramirez',
+    r'50392935',
+    r'20158945',
     r'ot_[a-zA-Z0-9]{10,}',
     r'-----BEGIN.*KEY-----',
-    r'\d{9,}:[A-Za-z0-9_-]{30,}',  # Telegram tokens
+    r'\d{9,}:[A-Za-z0-9_-]{30,}',
+    r'TRADE_PASSWORD=\d{6}',
 ]
 
 
 def sanitize_line(line: str) -> str:
-    """Apply all replacements to a single line."""
     for old, new in REPLACEMENTS.items():
         line = line.replace(old, new)
     for pattern, replacement in REGEX_PATTERNS:
@@ -68,22 +73,18 @@ def sanitize_line(line: str) -> str:
 
 
 def sanitize_cast(input_path: str, output_path: str) -> None:
-    """Read a .cast file, sanitize all text, write to output."""
     with open(input_path, 'r') as f:
         lines = f.readlines()
 
-    sanitized = []
-    for i, line in enumerate(lines):
-        sanitized.append(sanitize_line(line))
+    sanitized = [sanitize_line(line) for line in lines]
 
     with open(output_path, 'w') as f:
         f.writelines(sanitized)
 
-    print(f"Sanitized {len(lines)} lines → {output_path}")
+    print(f"Sanitized {len(lines)} lines -> {output_path}")
 
 
 def verify(path: str) -> bool:
-    """Check that no sensitive patterns remain in the output."""
     with open(path, 'r') as f:
         content = f.read()
 
@@ -91,7 +92,7 @@ def verify(path: str) -> bool:
     for pattern in VERIFY_PATTERNS:
         matches = re.findall(pattern, content)
         if matches:
-            print(f"  FAIL: pattern '{pattern}' found {len(matches)} times: {matches[:3]}")
+            print(f"  FAIL: '{pattern}' found {len(matches)}x: {matches[:3]}")
             clean = False
 
     if clean:
@@ -104,16 +105,12 @@ def main():
         print("Usage: python3 sanitize-cast.py input.cast output.cast [--verify]")
         sys.exit(1)
 
-    input_path = sys.argv[1]
-    output_path = sys.argv[2]
-    do_verify = '--verify' in sys.argv
+    sanitize_cast(sys.argv[1], sys.argv[2])
 
-    sanitize_cast(input_path, output_path)
-
-    if do_verify:
-        print("\nVerifying output...")
-        if not verify(output_path):
-            print("\nWARNING: Sensitive patterns remain! Add them to REPLACEMENTS dict.")
+    if '--verify' in sys.argv:
+        print("\nVerifying...")
+        if not verify(sys.argv[2]):
+            print("\nWARNING: sensitive patterns remain!")
             sys.exit(1)
 
 
