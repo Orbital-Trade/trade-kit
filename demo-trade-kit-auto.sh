@@ -85,7 +85,7 @@ info "14 standalone Go tools — each with its own binary, config, and go.mod."
 info "Three broker CLIs (Tiger, Moomoo, eToro), four scanner bots,"
 info "a scheduler, risk controller, notifier, and more."
 echo ""
-run ls -d */ | grep -v node_modules | tr -d '/'
+run ls -d tiger moomoo etoro scheduler daytrader earnings bounce controller index notifier alert journal options backtest
 
 info "Build everything with one command:"
 run make all
@@ -139,20 +139,32 @@ header "Scanner Bots — Automated Signal Generation"
 section "daytrader-bot — Gap-Up Day Trader (Game 3)"
 info "Scans watchlist at pre-market for gap-ups with volume confirmation."
 info "Gap 3-20%, RVOL > 1.5, auto stop-loss and R:R filter."
-run cat daytrader/daytrader.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps({k:d[k] for k in ['gap_min_pct','gap_max_pct','stop_pct','rr_min','budget','watchlist']}, indent=2))"
+echo -e "${GREEN}\$ cat daytrader/daytrader.json${RESET}"
+sleep 0.5
+python3 -c "import json; d=json.load(open('$BASE_DIR/daytrader/daytrader.json')); print(json.dumps({k:d[k] for k in ['gap_min_pct','gap_max_pct','stop_pct','rr_min','budget','watchlist']}, indent=2))"
+sleep 3
 
 section "bounce-bot — RSI Oversold Scanner (Game 2)"
 info "Finds stocks with RSI < 30 and volume spike — mean reversion entries."
-run cat bounce/bounce.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps({k:d[k] for k in ['rsi_threshold','rsi_exit','stop_pct','budget','watchlist']}, indent=2))"
+echo -e "${GREEN}\$ cat bounce/bounce.json${RESET}"
+sleep 0.5
+python3 -c "import json; d=json.load(open('$BASE_DIR/bounce/bounce.json')); print(json.dumps({k:d[k] for k in ['rsi_entry','rsi_exit','stop_pct','budget','watchlist']}, indent=2))"
+sleep 3
 
 section "earnings-bot — Earnings Play Scanner (Game 1)"
 info "Pre-earnings entries: buy N days before, exit on earnings day."
-run cat earnings/earnings.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps({k:d[k] for k in ['days_before','stop_pct','budget','watchlist','earnings_dates']}, indent=2))"
+echo -e "${GREEN}\$ cat earnings/earnings.json${RESET}"
+sleep 0.5
+python3 -c "import json; d=json.load(open('$BASE_DIR/earnings/earnings.json')); print(json.dumps({k:d[k] for k in ['days_before','stop_pct','budget','watchlist','earnings_dates']}, indent=2))"
+sleep 3
 
 section "index-trader — QQQ/VIX Momentum Bot (Game 5)"
 info "Day-trades TQQQ/SQQQ based on QQQ momentum + VIX levels."
 info "Polls every 30s, auto stop at -5%, target at +6%, EOD exit."
-run cat index/index.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps({k:d[k] for k in ['qqq_long_threshold','qqq_short_threshold','vix_max','budget','stop_pct','target_pct']}, indent=2))"
+echo -e "${GREEN}\$ cat index/index.json${RESET}"
+sleep 0.5
+python3 -c "import json; d=json.load(open('$BASE_DIR/index/index.json')); print(json.dumps({k:d[k] for k in ['qqq_long_threshold','qqq_short_threshold','vix_max','budget','stop_pct','target_pct']}, indent=2))"
+sleep 3
 
 # ── 5. Controller — Risk Management ─────────────────────────────────────────
 
@@ -160,7 +172,10 @@ header "controller — Portfolio Risk Manager"
 
 info "Circuit breaker trips at -10% drawdown, emergency stop at -15%."
 info "Enforces position limits, R:R minimums, and cash reserves."
-run cat controller/controller.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps(d, indent=2))"
+echo -e "${GREEN}\$ cat controller/controller.json${RESET}"
+sleep 0.5
+python3 -c "import json; print(json.dumps(json.load(open('$BASE_DIR/controller/controller.json')), indent=2))"
+sleep 3
 
 # ── 6. Notifier — Signal Delivery ────────────────────────────────────────────
 

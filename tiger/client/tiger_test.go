@@ -60,9 +60,10 @@ func TestFallbackContract_futureOnly(t *testing.T) {
 	month := int(monthStr[0]-'0')*10 + int(monthStr[1]-'0')
 
 	now := time.Now()
-	contractDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
-	if contractDate.Before(now.AddDate(0, 0, -1)) {
-		t.Errorf("fallback contract %s is in the past (year=%d, month=%d)", code, year, month)
+	// Contract is valid through the last day of its expiry month.
+	contractEnd := time.Date(year, time.Month(month)+1, 0, 23, 59, 59, 0, time.UTC)
+	if contractEnd.Before(now) {
+		t.Errorf("fallback contract %s has expired (year=%d, month=%d)", code, year, month)
 	}
 }
 
