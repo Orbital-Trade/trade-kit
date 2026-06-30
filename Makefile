@@ -17,34 +17,34 @@ sidecar:
 	cd sidecar   && go build -ldflags "-X main.Version=$$(cat ../VERSION)" -o trade-kit ./cmd/
 
 scheduler:
-	cd scheduler && go build -o scheduler    ./cmd/
+	cd scheduler && GOWORK=off go build -o scheduler    ./cmd/
 
 daytrader:
-	cd daytrader && go build -o daytrader-bot ./cmd/
+	cd daytrader && GOWORK=off go build -o daytrader-bot ./cmd/
 
 earnings:
-	cd earnings  && go build -o earnings-bot ./cmd/
+	cd earnings  && GOWORK=off go build -o earnings-bot ./cmd/
 
 bounce:
-	cd bounce    && go build -o bounce-bot   ./cmd/
+	cd bounce    && GOWORK=off go build -o bounce-bot   ./cmd/
 
 index:
-	cd index     && go build -o index-trader ./cmd/
+	cd index     && GOWORK=off go build -o index-trader ./cmd/
 
 notifier:
-	cd notifier  && go build -o notifier     ./cmd/
+	cd notifier  && GOWORK=off go build -o notifier     ./cmd/
 
 alert:
-	cd alert     && go build -o alert        ./cmd/
+	cd alert     && GOWORK=off go build -o alert        ./cmd/
 
 journal:
-	cd journal   && go build -o journal      ./cmd/
+	cd journal   && GOWORK=off go build -o journal      ./cmd/
 
 options:
-	cd options   && go build -o options      ./cmd/
+	cd options   && GOWORK=off go build -o options      ./cmd/
 
 backtest:
-	cd backtest  && go build -o backtest     ./cmd/
+	cd backtest  && GOWORK=off go build -o backtest     ./cmd/
 
 test:
 	cd tiger && go test ./...
