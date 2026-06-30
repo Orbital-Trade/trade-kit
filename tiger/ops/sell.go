@@ -40,6 +40,7 @@ func SellLimit(c Caller, symbol string, shares int, limitPrice float64) (OrderRe
 	p["total_quantity"] = shares
 	p["limit_price"] = limitPrice
 	p["time_in_force"] = "GTC"
+	p["outside_rth"] = false
 	data, err := c.Call("place_order", p)
 	if err != nil {
 		return OrderResult{}, fmt.Errorf("sell_limit %s: %w", info.Symbol, err)

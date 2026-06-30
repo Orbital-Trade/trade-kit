@@ -1,0 +1,178 @@
+package broker
+
+import (
+	"fmt"
+	"strconv"
+	"sync"
+
+	mooclient "moomoo-cli/client"
+)
+
+// MoomooAdapter wraps moomoo-cli client into the BrokerAdapter interface.
+type MoomooAdapter struct {
+	mu     sync.RWMutex
+	client *mooclient.Client
+	paper  bool
+	creds  map[string]string
+}
+
+// NewMoomooAdapter creates a disconnected Moomoo adapter.
+func NewMoomooAdapter() *MoomooAdapter {
+	return &MoomooAdapter{paper: true}
+}
+
+func (a *MoomooAdapter) ID() string   { return "moomoo" }
+func (a *MoomooAdapter) Name() string { return "Moomoo (Futu)" }
+
+func (a *MoomooAdapter) Connected() bool {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.client != nil
+}
+
+func (a *MoomooAdapter) Connect(creds map[string]string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	host := creds["host"]
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	port, _ := strconv.Atoi(creds["port"])
+	if port == 0 {
+		port = 11111
+	}
+	accID, _ := strconv.ParseInt(creds["acc_id"], 10, 64)
+
+	cfg := mooclient.Config{
+		Host:      host,
+		Port:      port,
+		TradePass: creds["trade_password"],
+		AccID:     accID,
+	}
+
+	c, err := mooclient.Connect(cfg, a.paper)
+	if err != nil {
+		return fmt.Errorf("moomoo: %w", err)
+	}
+	a.client = c
+	a.creds = creds
+	return nil
+}
+
+func (a *MoomooAdapter) Test() error {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	if a.client == nil {
+		return fmt.Errorf("moomoo: not connected")
+	}
+	_, err := a.client.AccountInfo()
+	return err
+}
+
+func (a *MoomooAdapter) Disconnect() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.client != nil {
+		a.client.Close()
+		a.client = nil
+	}
+	return nil
+}
+
+func (a *MoomooAdapter) Positions() ([]Position, error) {
+	a.mu.RLock()
+	c := a.client
+	a.mu.RUnlock()
+	if c == nil {
+		return nil, fmt.Errorf("moomoo: not connected")
+	}
+
+	positions, err := c.Positions()
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]Position, len(positions))
+	for i, p := range positions {
+		side := "BUY"
+		if p.Shares < 0 {
+			side = "SELL"
+		}
+		var pnlPct float64
+		if p.AvgCost > 0 && p.Shares != 0 {
+			pnlPct = (p.MarketPrice - p.AvgCost) / p.AvgCost * 100
+		}
+		out[i] = Position{
+			Symbol:      p.Symbol,
+			Side:        side,
+			Units:       float64(p.Shares),
+			Amount:      p.MarketValue,
+			OpenRate:    p.AvgCost,
+			CurrentRate: p.MarketPrice,
+			PnL:         p.UnrealPnL,
+			PnLPct:      pnlPct,
+		}
+	}
+	return out, nil
+}
+
+func (a *MoomooAdapter) Account() (AccountInfo, error) {
+	a.mu.RLock()
+	c := a.client
+	a.mu.RUnlock()
+	if c == nil {
+		return AccountInfo{}, fmt.Errorf("moomoo: not connected")
+	}
+
+	acct, err := c.AccountInfo()
+	if err != nil {
+		return AccountInfo{}, err
+	}
+
+	return AccountInfo{
+		Equity:        acct.NetAssets,
+		Cash:          acct.Cash,
+		TotalInvested: acct.MarketValue,
+		TotalPnL:      acct.NetAssets - acct.Cash - acct.MarketValue,
+		Available:     acct.BuyingPower,
+	}, nil
+}
+
+func (a *MoomooAdapter) Orders() ([]OrderInfo, error) {
+	a.mu.RLock()
+	c := a.client
+	a.mu.RUnlock()
+	if c == nil {
+		return nil, fmt.Errorf("moomoo: not connected")
+	}
+
+	orders, err := c.Orders()
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]OrderInfo, len(orders))
+	for i, o := range orders {
+		out[i] = OrderInfo{
+			OrderID: o.OrderID,
+			Symbol:  o.Symbol,
+			Side:    o.Side,
+			Amount:  float64(o.Qty),
+			Rate:    o.Price,
+			Status:  o.Status,
+		}
+	}
+	return out, nil
+}
+
+func (a *MoomooAdapter) SetPaper(paper bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.paper = paper
+	// Moomoo requires reconnect to change mode.
+	if a.client != nil && a.creds != nil {
+		a.client.Close()
+		a.client = nil
+	}
+}

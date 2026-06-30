@@ -66,6 +66,24 @@ func New(paper bool) (*TigerClient, error) {
 	}, nil
 }
 
+// NewFromCreds constructs a TigerClient from explicit credentials,
+// bypassing .env file loading. Used by the sidecar server.
+func NewFromCreds(tigerID, account, privateKeyB64, tradePassword string, paper bool) (*TigerClient, error) {
+	key, err := parseKey(privateKeyB64)
+	if err != nil {
+		return nil, fmt.Errorf("private key: %w", err)
+	}
+	return &TigerClient{
+		tigerID:       tigerID,
+		account:       account,
+		tradePassword: tradePassword,
+		privateKey:    key,
+		http:          &http.Client{Timeout: 15 * time.Second},
+		paper:         paper,
+		contractCache: make(map[string]string),
+	}, nil
+}
+
 // Account returns the Tiger account number.
 func (c *TigerClient) Account() string { return c.account }
 

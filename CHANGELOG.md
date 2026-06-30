@@ -6,6 +6,66 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [0.6.0] — 2026-06-30
+
+### Added
+
+**etoro-cli — eToro broker integration**
+- New `etoro/` tool: full eToro REST API client with same CLI interface as tiger-cli and moomoo-cli
+- Auth: `x-api-key` + `x-user-key` + auto-generated `x-request-id` UUID headers
+- API base: `https://api.etoro.com` via [api-portal.etoro.com](https://api-portal.etoro.com)
+- Rate limiting: auto-reads `RateLimit-Remaining`/`RateLimit-Reset` headers, waits on 429
+- Credential search: `../../brokers/eToro/.env`, `brokers/eToro/.env`, `~/.trade-kit/etoro/.env`
+- Demo/live mode: `--paper` (default) routes to `/api/v1/trading/demo`, `--live` to `/api/v1/trading/real`
+- Instrument ID resolution: ticker symbols auto-resolved to eToro numeric IDs via Asset Explorer API with in-process cache
+- Commands: `positions`, `account`, `quote`, `orders`, `search`, `buy`, `sell`, `close`, `cancel`, `modify`, `stop`, `target`, `watchlist`, `alert`
+- Watchlist CRUD: `watchlist create|add|delete`
+- Price alerts CRUD: `alert list|create|delete` with `--above`/`--below` thresholds
+- Market data: eToro candle API with Yahoo Finance fallback
+- `--json` flag on all commands for scripting
+- 22 unit tests covering account, positions, orders, buy, sell, instruments, client
+- Build: `cd etoro && go build -o etoro-cli ./cmd/`
+
+**sidecar — Go HTTP server for desktop app integration**
+- New `sidecar/` tool: HTTP server bridging the OrbitalTrade Electron desktop app to all broker CLIs
+- Binary name: `trade-kit` (spawned by Electron `SidecarManager` as `trade-kit serve --port 19090`)
+- Auth: `ORBITAL_AUTH_TOKEN` env var → Bearer token middleware with constant-time comparison
+- Go workspace (`go.work`): directly imports tiger-cli, moomoo-cli, etoro-cli ops packages (no shell-out)
+- Unified `BrokerAdapter` interface normalizes all three brokers to common Position/AccountInfo/OrderInfo types
+- REST endpoints (14 total):
+  - `GET /v1/status` — version, uptime, paper mode, broker connection states
+  - `POST /v1/kill` — graceful shutdown (disconnect brokers, stop server)
+  - `GET /v1/brokers` — list all brokers with connection status
+  - `POST /v1/brokers/{id}/connect` — connect with credentials (JSON body)
+  - `POST /v1/brokers/{id}/test` — verify connection via lightweight API call
+  - `POST /v1/brokers/{id}/disconnect`
+  - `GET /v1/brokers/{id}/positions` — unified positions with SSE broadcast
+  - `GET /v1/brokers/{id}/account` — unified account summary
+  - `GET /v1/brokers/{id}/orders` — unified pending orders
+  - `GET /v1/recipes` — list available recipes (stub)
+  - `POST /v1/recipes/{id}/start|stop` — recipe lifecycle (stub)
+  - `POST /v1/settings/paper-mode` — propagate paper mode to all brokers
+  - `GET /v1/events` — Server-Sent Events stream for real-time updates
+- SSE event types: `position_update`, `pnl_tick`, `recipe_state`, `error`
+- Graceful shutdown on SIGTERM/SIGINT
+- Build: `cd sidecar && go build -o trade-kit ./cmd/`
+
+**tiger-cli: `NewFromCreds()` constructor**
+- New exported `client.NewFromCreds(tigerID, account, privateKeyB64, tradePassword, paper)` constructor
+- Constructs a TigerClient from explicit credentials without reading `.env` files
+- Used by the sidecar server; existing `client.New(paper)` unchanged
+
+**etoro-cli: `NewFromCreds()` constructor**
+- New exported `client.NewFromCreds(apiKey, userKey, paper)` constructor
+- Same pattern as Tiger; used by sidecar for programmatic broker connection
+
+**Makefile**
+- Added `etoro` and `sidecar` build targets
+- `make test` now runs both tiger and etoro test suites
+- `make clean` removes etoro-cli and sidecar/trade-kit binaries
+
+---
+
 ## [0.5.0] — 2026-06-06
 
 ### Added

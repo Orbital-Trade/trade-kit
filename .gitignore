@@ -8,6 +8,12 @@ bounce/bounce-bot
 controller/controller
 index/index-trader
 notifier/notifier
+etoro/etoro-cli
+sidecar/trade-kit
+alert/alert
+journal/journal
+options/options
+backtest/backtest
 
 # Runtime state — contains personal paths and live orders
 scheduler/order-queue.json

@@ -1,4 +1,4 @@
-TOOLS := tiger moomoo scheduler daytrader earnings bounce index notifier alert journal options backtest
+TOOLS := tiger moomoo etoro sidecar scheduler daytrader earnings bounce index notifier alert journal options backtest
 
 .PHONY: all clean test $(TOOLS)
 
@@ -9,6 +9,12 @@ tiger:
 
 moomoo:
 	cd moomoo    && go build -o moomoo-cli   ./cmd/
+
+etoro:
+	cd etoro     && go build -o etoro-cli    ./cmd/
+
+sidecar:
+	cd sidecar   && go build -ldflags "-X main.Version=$$(cat ../VERSION)" -o trade-kit ./cmd/
 
 scheduler:
 	cd scheduler && go build -o scheduler    ./cmd/
@@ -42,6 +48,7 @@ backtest:
 
 test:
 	cd tiger && go test ./...
+	cd etoro && go test ./...
 
 clean:
 	rm -f tiger/tiger-cli
@@ -55,4 +62,6 @@ clean:
 	rm -f alert/alert
 	rm -f journal/journal
 	rm -f options/options
+	rm -f etoro/etoro-cli
+	rm -f sidecar/trade-kit
 	rm -f backtest/backtest
