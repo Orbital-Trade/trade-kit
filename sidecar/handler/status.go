@@ -36,7 +36,7 @@ func (h *Handlers) GetStatus(w http.ResponseWriter, r *http.Request) {
 		Uptime:         time.Since(startTime).Round(time.Second).String(),
 		PaperMode:      h.registry.IsPaper(),
 		Brokers:        bs,
-		RecipesRunning: 0,
+		RecipesRunning: h.runner.RunningCount(),
 	})
 }
 

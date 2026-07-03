@@ -156,6 +156,50 @@ func (a *EtoroAdapter) Orders() ([]OrderInfo, error) {
 	return out, nil
 }
 
+func (a *EtoroAdapter) IsPaper() bool {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.paper
+}
+
+func (a *EtoroAdapter) Buy(symbol string, qty int, limitPrice, stopPrice float64) (string, string, error) {
+	a.mu.RLock()
+	c := a.client
+	a.mu.RUnlock()
+	if c == nil {
+		return "", "", fmt.Errorf("etoro: not connected")
+	}
+	if a.paper {
+		return "PAPER-ENTRY", "PAPER-STOP", nil
+	}
+
+	res, err := etoroops.BuyWithStops(c, symbol, float64(qty), limitPrice, stopPrice, 0)
+	if err != nil {
+		return "", "", err
+	}
+	return res.OrderID, "", nil
+}
+
+func (a *EtoroAdapter) Sell(symbol string, qty int) (string, error) {
+	a.mu.RLock()
+	c := a.client
+	a.mu.RUnlock()
+	if c == nil {
+		return "", fmt.Errorf("etoro: not connected")
+	}
+	if a.paper {
+		return "PAPER-SELL", nil
+	}
+	results, err := etoroops.SellBySymbol(c, symbol, float64(qty))
+	if err != nil {
+		return "", err
+	}
+	if len(results) > 0 {
+		return results[0].PositionID, nil
+	}
+	return "", nil
+}
+
 func (a *EtoroAdapter) SetPaper(paper bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()

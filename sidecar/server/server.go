@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"trade-kit-sidecar/broker"
+	"trade-kit-sidecar/recipe"
 )
 
 // Config holds server configuration.
@@ -25,6 +26,7 @@ type Server struct {
 	config      Config
 	registry    *broker.Registry
 	broadcaster *Broadcaster
+	runner      *recipe.Runner
 	startTime   time.Time
 	httpServer  *http.Server
 	shutdown    chan struct{}
@@ -32,10 +34,13 @@ type Server struct {
 
 // New creates a new sidecar server.
 func New(cfg Config) *Server {
+	reg := broker.NewRegistry()
+	bc := NewBroadcaster()
 	return &Server{
 		config:      cfg,
-		registry:    broker.NewRegistry(),
-		broadcaster: NewBroadcaster(),
+		registry:    reg,
+		broadcaster: bc,
+		runner:      recipe.NewRunner(reg, bc),
 		startTime:   time.Now(),
 		shutdown:    make(chan struct{}),
 	}
@@ -95,6 +100,9 @@ func (s *Server) ListenAndServe() error {
 }
 
 func (s *Server) gracefulShutdown() {
+	// Stop all running recipes first.
+	s.runner.StopAll()
+
 	// Disconnect all brokers.
 	for _, b := range s.registry.List() {
 		if b.Connected {

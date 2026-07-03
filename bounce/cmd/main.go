@@ -16,7 +16,7 @@ import (
 	"bounce-bot/internal/broker"
 	"bounce-bot/internal/signal"
 	"bounce-bot/internal/store"
-	"bounce-bot/internal/strategy"
+	"bounce-bot/strategy"
 )
 
 func main() {

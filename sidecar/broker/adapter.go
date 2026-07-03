@@ -13,6 +13,9 @@ type BrokerAdapter interface {
 	Positions() ([]Position, error)
 	Account() (AccountInfo, error)
 	Orders() ([]OrderInfo, error)
+	Buy(symbol string, qty int, limitPrice, stopPrice float64) (entryID, stopID string, err error)
+	Sell(symbol string, qty int) (orderID string, err error)
+	IsPaper() bool
 	SetPaper(paper bool)
 }
 

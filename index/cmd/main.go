@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jpramirez/trade-kit/index/internal/strategy"
+	"github.com/jpramirez/trade-kit/index/strategy"
 )
 
 func main() {

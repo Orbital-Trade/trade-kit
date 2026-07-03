@@ -155,6 +155,62 @@ func (a *TigerAdapter) Orders() ([]OrderInfo, error) {
 	return out, nil
 }
 
+func (a *TigerAdapter) IsPaper() bool {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.paper
+}
+
+func (a *TigerAdapter) Buy(symbol string, qty int, limitPrice, stopPrice float64) (string, string, error) {
+	a.mu.RLock()
+	c := a.client
+	a.mu.RUnlock()
+	if c == nil {
+		return "", "", fmt.Errorf("tiger: not connected")
+	}
+	if a.paper {
+		return "PAPER-ENTRY", "PAPER-STOP", nil
+	}
+
+	var entry tigerops.OrderResult
+	var err error
+	if limitPrice > 0 {
+		entry, err = tigerops.BuyLimit(c, symbol, qty, limitPrice)
+	} else {
+		entry, err = tigerops.BuyMarket(c, symbol, qty)
+	}
+	if err != nil {
+		return "", "", err
+	}
+
+	var stopID string
+	if stopPrice > 0 {
+		stop, err := tigerops.SetStopLoss(c, symbol, qty, stopPrice)
+		if err != nil {
+			return entry.OrderID, "", fmt.Errorf("entry placed (%s) but stop failed: %w", entry.OrderID, err)
+		}
+		stopID = stop.OrderID
+	}
+	return entry.OrderID, stopID, nil
+}
+
+func (a *TigerAdapter) Sell(symbol string, qty int) (string, error) {
+	a.mu.RLock()
+	c := a.client
+	a.mu.RUnlock()
+	if c == nil {
+		return "", fmt.Errorf("tiger: not connected")
+	}
+	if a.paper {
+		return "PAPER-SELL", nil
+	}
+	res, err := tigerops.SellMarket(c, symbol, qty)
+	if err != nil {
+		return "", err
+	}
+	return res.OrderID, nil
+}
+
 func (a *TigerAdapter) SetPaper(paper bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()

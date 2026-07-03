@@ -27,7 +27,7 @@ import (
 	"earnings-bot/internal/broker"
 	"earnings-bot/internal/signal"
 	"earnings-bot/internal/store"
-	"earnings-bot/internal/strategy"
+	"earnings-bot/strategy"
 )
 
 func main() {

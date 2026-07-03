@@ -3,6 +3,7 @@ package handler
 
 import (
 	"trade-kit-sidecar/broker"
+	"trade-kit-sidecar/recipe"
 )
 
 // EventBroadcaster is the interface for broadcasting SSE events.
@@ -14,6 +15,7 @@ type EventBroadcaster interface {
 type Handlers struct {
 	registry    *broker.Registry
 	broadcaster EventBroadcaster
+	runner      *recipe.Runner
 	srv         interface {
 		Version() string
 		Shutdown()
@@ -21,13 +23,14 @@ type Handlers struct {
 }
 
 // New creates a new Handlers instance.
-func New(registry *broker.Registry, broadcaster EventBroadcaster, srv interface {
+func New(registry *broker.Registry, broadcaster EventBroadcaster, runner *recipe.Runner, srv interface {
 	Version() string
 	Shutdown()
 }) *Handlers {
 	return &Handlers{
 		registry:    registry,
 		broadcaster: broadcaster,
+		runner:      runner,
 		srv:         srv,
 	}
 }

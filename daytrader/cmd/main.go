@@ -22,7 +22,7 @@ import (
 	"daytrader-bot/internal/broker"
 	"daytrader-bot/internal/signal"
 	"daytrader-bot/internal/store"
-	"daytrader-bot/internal/strategy"
+	"daytrader-bot/strategy"
 )
 
 func main() {

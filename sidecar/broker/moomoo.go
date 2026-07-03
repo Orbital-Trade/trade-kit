@@ -166,6 +166,51 @@ func (a *MoomooAdapter) Orders() ([]OrderInfo, error) {
 	return out, nil
 }
 
+func (a *MoomooAdapter) IsPaper() bool {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.paper
+}
+
+func (a *MoomooAdapter) Buy(symbol string, qty int, limitPrice, stopPrice float64) (string, string, error) {
+	a.mu.RLock()
+	c := a.client
+	a.mu.RUnlock()
+	if c == nil {
+		return "", "", fmt.Errorf("moomoo: not connected")
+	}
+	if a.paper {
+		return "PAPER-ENTRY", "PAPER-STOP", nil
+	}
+
+	orderType := "MKT"
+	if limitPrice > 0 {
+		orderType = "LMT"
+	}
+	res, err := c.PlaceOrder(symbol, "BUY", orderType, int64(qty), limitPrice, stopPrice, "DAY")
+	if err != nil {
+		return "", "", err
+	}
+	return res.OrderID, "", nil
+}
+
+func (a *MoomooAdapter) Sell(symbol string, qty int) (string, error) {
+	a.mu.RLock()
+	c := a.client
+	a.mu.RUnlock()
+	if c == nil {
+		return "", fmt.Errorf("moomoo: not connected")
+	}
+	if a.paper {
+		return "PAPER-SELL", nil
+	}
+	res, err := c.PlaceOrder(symbol, "SELL", "MKT", int64(qty), 0, 0, "DAY")
+	if err != nil {
+		return "", err
+	}
+	return res.OrderID, nil
+}
+
 func (a *MoomooAdapter) SetPaper(paper bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()

@@ -1,8 +1,12 @@
-go 1.25
+go 1.25.0
 
 use (
 	./sidecar
 	./tiger
 	./moomoo
 	./etoro
+	./daytrader
+	./bounce
+	./earnings
+	./index
 )
