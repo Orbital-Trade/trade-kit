@@ -82,3 +82,80 @@ func (h *Handlers) DisconnectBroker(w http.ResponseWriter, r *http.Request) {
 	adapter.Disconnect()
 	api.WriteOK(w)
 }
+
+// BuyOrder places a buy order through a broker.
+func (h *Handlers) BuyOrder(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	adapter, err := h.registry.Get(id)
+	if err != nil {
+		api.WriteError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	if !adapter.Connected() {
+		api.WriteError(w, http.StatusBadRequest, "broker not connected")
+		return
+	}
+
+	var req struct {
+		Symbol     string  `json:"symbol"`
+		Qty        int     `json:"qty"`
+		LimitPrice float64 `json:"limit_price"`
+		StopPrice  float64 `json:"stop_price"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		api.WriteError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if req.Symbol == "" || req.Qty <= 0 {
+		api.WriteError(w, http.StatusBadRequest, "symbol and qty are required")
+		return
+	}
+
+	entryID, stopID, err := adapter.Buy(req.Symbol, req.Qty, req.LimitPrice, req.StopPrice)
+	if err != nil {
+		api.WriteJSON(w, http.StatusOK, map[string]interface{}{"ok": false, "error": err.Error()})
+		return
+	}
+	api.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"ok":       true,
+		"entry_id": entryID,
+		"stop_id":  stopID,
+	})
+}
+
+// SellOrder closes a position by symbol.
+func (h *Handlers) SellOrder(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	adapter, err := h.registry.Get(id)
+	if err != nil {
+		api.WriteError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	if !adapter.Connected() {
+		api.WriteError(w, http.StatusBadRequest, "broker not connected")
+		return
+	}
+
+	var req struct {
+		Symbol string `json:"symbol"`
+		Qty    int    `json:"qty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		api.WriteError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if req.Symbol == "" {
+		api.WriteError(w, http.StatusBadRequest, "symbol is required")
+		return
+	}
+
+	orderID, err := adapter.Sell(req.Symbol, req.Qty)
+	if err != nil {
+		api.WriteJSON(w, http.StatusOK, map[string]interface{}{"ok": false, "error": err.Error()})
+		return
+	}
+	api.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"ok":       true,
+		"order_id": orderID,
+	})
+}

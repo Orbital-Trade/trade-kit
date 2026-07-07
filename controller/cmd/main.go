@@ -124,6 +124,7 @@ func main() {
 	}
 
 	signalsPath := "signals.json"
+	var simulateDrawdown float64
 	var remaining []string
 
 	for i := 1; i < len(os.Args); i++ {
@@ -131,6 +132,11 @@ func main() {
 		case "--signals":
 			if i+1 < len(os.Args) {
 				signalsPath = os.Args[i+1]
+				i++
+			}
+		case "--simulate-drawdown":
+			if i+1 < len(os.Args) {
+				simulateDrawdown, _ = strconv.ParseFloat(os.Args[i+1], 64)
 				i++
 			}
 		default:
@@ -152,7 +158,7 @@ func main() {
 
 	switch remaining[0] {
 	case "status":
-		cmdStatus(cfg, bus, signalsPath)
+		cmdStatus(cfg, bus, signalsPath, simulateDrawdown)
 	case "monitor":
 		cmdMonitor(bus)
 	case "gate":
@@ -180,7 +186,7 @@ func main() {
 
 // ─── STATUS ──────────────────────────────────────────────────────────────────
 
-func cmdStatus(cfg Config, bus *signal.Bus, signalsPath string) {
+func cmdStatus(cfg Config, bus *signal.Bus, signalsPath string, simulateDrawdown float64) {
 	_ = bus.Reload()
 
 	c, err := client.New(false)
@@ -193,11 +199,22 @@ func cmdStatus(cfg Config, bus *signal.Bus, signalsPath string) {
 	orders, _ := ops.GetOrders(c)
 	sigs := bus.All()
 
-	// Update nav history (circuit breaker baseline)
+	// Update nav history (circuit breaker baseline) — use real NAV
 	navHist := updateNavHistory(account.NetLiquidation)
+
+	// Apply simulated drawdown AFTER recording real NAV history
+	if simulateDrawdown > 0 {
+		account.NetLiquidation *= (1 - simulateDrawdown/100)
+		account.Cash *= (1 - simulateDrawdown/100)
+		account.GrossPositionValue *= (1 - simulateDrawdown/100)
+	}
 
 	now := time.Now()
 	fmt.Printf("═══ ORBITAL CTRL — %s ═══\n\n", now.Format("2006-01-02 15:04 MST"))
+
+	if simulateDrawdown > 0 {
+		fmt.Printf("  ⚠️  SIMULATED DRAWDOWN: -%.1f%% applied (display only — real NAV unchanged)\n\n", simulateDrawdown)
+	}
 
 	// 1. NAV Trajectory + Circuit Breaker
 	printNavTrajectory(account.NetLiquidation, navHist, cfg)
@@ -870,7 +887,8 @@ Commands:
   estop               EMERGENCY: cancel all orders + market-sell all positions
 
 Flags:
-  --signals path    Path to shared signals.json (default: ./signals.json)
+  --signals path              Path to shared signals.json (default: ./signals.json)
+  --simulate-drawdown PCT     Fake a NAV drop of PCT% to test the circuit breaker
 
 Config:
   controller.json in working directory. Contains T1 symbols, gate thresholds,
