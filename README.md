@@ -4,7 +4,7 @@
 [![Stars](https://img.shields.io/github/stars/Orbital-Trade/trade-kit?style=social)](https://github.com/Orbital-Trade/trade-kit)
 
 <p align="center">
-  <img src="banner.png" alt="trade-kit" width="600">
+  <img src="https://raw.githubusercontent.com/Orbital-Trade/trade-kit/main/banner.png" alt="trade-kit" width="600">
 </p>
 
 **Open-source multi-broker CLI toolkit for retail traders.**
