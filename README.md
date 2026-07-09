@@ -3,18 +3,33 @@
 [![Release](https://img.shields.io/github/v/release/Orbital-Trade/trade-kit)](https://github.com/Orbital-Trade/trade-kit/releases)
 [![Stars](https://img.shields.io/github/stars/Orbital-Trade/trade-kit?style=social)](https://github.com/Orbital-Trade/trade-kit)
 
-# trade-kit
+```
+  ████████╗██████╗  █████╗ ██████╗ ███████╗
+  ╚══██╔══╝██╔══██╗██╔══██╗██╔══██╗██╔════╝
+     ██║   ██████╔╝███████║██║  ██║█████╗
+     ██║   ██╔══██╗██╔══██║██║  ██║██╔══╝
+     ██║   ██║  ██║██║  ██║██████╔╝███████╗
+     ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
+  ██╗  ██╗██╗████████╗
+  ██║ ██╔╝██║╚══██╔══╝
+  █████╔╝ ██║   ██║
+  ██╔═██╗ ██║   ██║
+  ██║  ██╗██║   ██║
+  ╚═╝  ╚═╝╚═╝   ╚═╝
+```
 
-**The open-source CLI trading toolkit for Tiger Brokers and Moomoo.**
+**Open-source multi-broker CLI toolkit for retail traders.**
 
-Zero dependencies. Paper mode by default. Go binaries — download and run.
+Connect your Tiger, Moomoo, or eToro account. Scan, backtest, manage risk — from the terminal or through Claude.
 
-- **8 tools** — broker CLIs, 4 scanner bots, scheduler, portfolio risk controller
+- **15 tools** — 3 broker CLIs, 4 scanner bots, backtester, options viewer, scheduler, risk controller, notifier, journal, alerts
 - **Paper mode by default** — nothing touches your broker until you pass `--live`
+- **AI-ready** — Claude Code can run scans, backtests, and analysis through trade-kit directly
+- **Zero external dependencies** — pure Go stdlib, single binary per tool
 - **Shared signal bus** — bots coordinate via a single `signals.json` file
 - **Strategy packs** — pre-built configs for dividends, earnings, index scalps
 
-Built for retail traders in Singapore, Hong Kong, and the US who want to automate their workflow without writing code.
+Built for retail traders in Singapore, Hong Kong, and the US who want to automate their workflow.
 
 > ⚠️ See [DISCLAIMER.md](DISCLAIMER.md) — this is not financial advice.
 
@@ -24,14 +39,21 @@ Built for retail traders in Singapore, Hong Kong, and the US who want to automat
 
 | Tool | Binary | What it does |
 |---|---|---|
-| [tiger](#1-tiger-cli) | `tiger-cli` | Tiger Brokers — positions, quotes, orders, analysis |
-| [moomoo](#2-moomoo-cli) | `moomoo-cli` | Moomoo/Futu — same interface, pure Go TCP client |
-| [scheduler](#3-scheduler) | `scheduler` | Order queue daemon — fire orders at market windows |
-| [daytrader](#4-daytrader-bot) | `daytrader-bot` | Gap-up scanner — finds gap plays at pre-market open |
-| [earnings](#5-earnings-bot) | `earnings-bot` | Earnings scanner — buys pre-announcement run-up |
-| [bounce](#6-bounce-bot) | `bounce-bot` | RSI oversold bounce — buys dips with volume confirmation |
-| [index](#7-index-trader) | `index-trader` | Index momentum — QQQ/VIX signals for TQQQ/SQQQ |
-| [controller](#8-controller) | `controller` | Portfolio risk manager — circuit breaker, NAV, signal gate |
+| tiger | `tiger-cli` | Tiger Brokers — positions, quotes, orders, technical analysis, Markov model |
+| moomoo | `moomoo-cli` | Moomoo/Futu — same interface, pure Go TCP client via OpenD |
+| etoro | `etoro-cli` | eToro — REST API, demo/live mode, watchlists, price alerts |
+| scheduler | `scheduler` | Order queue daemon — fire orders at market windows (SGT/ET) |
+| daytrader | `daytrader-bot` | Gap-up scanner — pre-market gap plays with RVOL filter |
+| earnings | `earnings-bot` | Earnings scanner — pre-announcement run-up entries |
+| bounce | `bounce-bot` | RSI oversold bounce — mean reversion with volume confirmation |
+| index | `index-trader` | Index momentum — QQQ/VIX signals for TQQQ/SQQQ day trades |
+| controller | `controller` | Portfolio risk manager — circuit breaker, NAV tracking, kill switch |
+| backtest | `backtest` | Historical strategy validation — replay against OHLCV data |
+| options | `options` | Options chain viewer — calls/puts, IV, OI via Yahoo Finance |
+| notifier | `notifier` | Signal delivery — Telegram and Discord push notifications |
+| alert | `alert` | Price threshold daemon — polls and fires on cross |
+| journal | `journal` | Trade journal — SQLite log with FIFO P&L reporting |
+| sidecar | `trade-kit` | HTTP server — bridges the OrbitalTrade desktop app to all brokers |
 
 Jump to: [Setup](#setup) · [Strategy packs](#strategy-packs) · [Workflows](#workflow-playbooks) · [Signal bus](#the-signal-bus) · [Troubleshooting](#troubleshooting) · [Support this project](#support-this-project)
 
