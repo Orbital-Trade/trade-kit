@@ -31,6 +31,16 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/recipes/{id}/stop", h.StopRecipe)
 	mux.HandleFunc("GET /v1/recipes/{id}/signals", h.GetRecipeSignals)
 
+	// Copilot context
+	mux.HandleFunc("POST /v1/backtest", h.RunBacktest)
+	mux.HandleFunc("GET /v1/configs/{id}", h.GetConfig)
+	mux.HandleFunc("PUT /v1/configs/{id}", h.UpdateConfig)
+	mux.HandleFunc("GET /v1/journal", h.GetJournal)
+	mux.HandleFunc("GET /v1/journal/pnl", h.GetJournalPnL)
+	mux.HandleFunc("POST /v1/journal", h.AddJournalEntry)
+	mux.HandleFunc("GET /v1/strategies", h.ListStrategies)
+	mux.HandleFunc("GET /v1/strategies/{id}", h.GetStrategy)
+
 	// Settings
 	mux.HandleFunc("POST /v1/settings/paper-mode", h.SetPaperMode)
 
