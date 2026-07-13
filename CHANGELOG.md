@@ -6,6 +6,32 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [0.8.0] — 2026-07-14
+
+### Added
+
+**alpaca-cli — Alpaca Markets broker integration**
+- New `alpaca/` tool: full Alpaca REST API client for US equities
+- Auth: `APCA-API-KEY-ID` + `APCA-API-SECRET-KEY` headers
+- Paper mode built in: `--paper` uses `paper-api.alpaca.markets`, `--live` uses `api.alpaca.markets`
+- Commission-free trading, API-first design
+- Commands: `positions`, `account`, `quote`, `orders`, `buy`, `sell`, `close`, `cancel`
+- Bracket orders: `buy AAPL 10 --limit 150 --stop 145 --target 165`
+- Market data: Alpaca snapshot API with Yahoo Finance fallback
+- Rate limit tracking via `X-Ratelimit-Remaining` / `X-Ratelimit-Reset` headers
+- `NewFromCreds()` constructor for sidecar integration
+- 12 unit tests covering account, positions, buy, sell, client
+- Sidecar adapter: Alpaca registered as 4th broker in the registry
+- Build: `cd alpaca && go build -o alpaca-cli ./cmd/`
+
+**sidecar: copilot context endpoints**
+- `POST /v1/backtest` — run backtest and return JSON results
+- `GET/PUT /v1/configs/{id}` — read/write recipe config files
+- `GET /v1/journal` + `GET /v1/journal/pnl` + `POST /v1/journal` — trade history
+- `GET /v1/strategies` + `GET /v1/strategies/{id}` — serve strategy source files
+
+---
+
 ## [0.7.0] — 2026-07-07
 
 ### Added

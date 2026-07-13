@@ -10,4 +10,5 @@ require (
 	bounce-bot v0.0.0
 	earnings-bot v0.0.0
 	github.com/jpramirez/trade-kit/index v0.0.0
+	alpaca-cli v0.0.0
 )

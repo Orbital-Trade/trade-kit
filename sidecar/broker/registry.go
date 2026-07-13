@@ -21,6 +21,7 @@ func NewRegistry() *Registry {
 	r.brokers["tiger"] = NewTigerAdapter()
 	r.brokers["moomoo"] = NewMoomooAdapter()
 	r.brokers["etoro"] = NewEtoroAdapter()
+	r.brokers["alpaca"] = NewAlpacaAdapter()
 	return r
 }
 

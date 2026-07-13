@@ -9,6 +9,7 @@ controller/controller
 index/index-trader
 notifier/notifier
 etoro/etoro-cli
+alpaca/alpaca-cli
 sidecar/trade-kit
 alert/alert
 journal/journal
