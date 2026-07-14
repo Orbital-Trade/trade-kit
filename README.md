@@ -9,16 +9,16 @@
 
 **Open-source multi-broker CLI toolkit for retail traders.**
 
-Connect your Tiger, Moomoo, or eToro account. Scan, backtest, manage risk — from the terminal or through Claude.
+Connect your broker — Tiger, Moomoo, eToro, Alpaca, IBKR, or Zerodha. Scan, backtest, manage risk — from the terminal or through Claude.
 
-- **15 tools** — 3 broker CLIs, 4 scanner bots, backtester, options viewer, scheduler, risk controller, notifier, journal, alerts
+- **18 tools** — 6 broker CLIs, 4 scanner bots, backtester, options viewer, scheduler, risk controller, notifier, journal, alerts
 - **Paper mode by default** — nothing touches your broker until you pass `--live`
 - **AI-ready** — Claude Code can run scans, backtests, and analysis through trade-kit directly
 - **Zero external dependencies** — pure Go stdlib, single binary per tool
 - **Shared signal bus** — bots coordinate via a single `signals.json` file
 - **Strategy packs** — pre-built configs for dividends, earnings, index scalps
 
-Built for retail traders in Singapore, Hong Kong, and the US who want to automate their workflow.
+Built for retail traders in Singapore, Hong Kong, India, and the US who want to automate their workflow.
 
 > ⚠️ See [DISCLAIMER.md](DISCLAIMER.md) — this is not financial advice.
 
@@ -31,6 +31,9 @@ Built for retail traders in Singapore, Hong Kong, and the US who want to automat
 | tiger | `tiger-cli` | Tiger Brokers — positions, quotes, orders, technical analysis, Markov model |
 | moomoo | `moomoo-cli` | Moomoo/Futu — same interface, pure Go TCP client via OpenD |
 | etoro | `etoro-cli` | eToro — REST API, demo/live mode, watchlists, price alerts |
+| alpaca | `alpaca-cli` | Alpaca Markets — commission-free US equities, paper API built in |
+| ibkr | `ibkr-cli` | Interactive Brokers — Client Portal Gateway, global markets |
+| zerodha | `zerodha-cli` | Zerodha Kite — Indian markets (NSE/BSE), form-encoded orders |
 | scheduler | `scheduler` | Order queue daemon — fire orders at market windows (SGT/ET) |
 | daytrader | `daytrader-bot` | Gap-up scanner — pre-market gap plays with RVOL filter |
 | earnings | `earnings-bot` | Earnings scanner — pre-announcement run-up entries |

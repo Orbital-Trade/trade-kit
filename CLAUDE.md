@@ -13,7 +13,7 @@
 
 ## What this is
 
-trade-kit is an **open-source multi-broker CLI toolkit** for retail traders. 15 Go tools — scan, backtest, trade, manage risk — across Tiger Brokers, Moomoo, and eToro.
+trade-kit is an **open-source multi-broker CLI toolkit** for retail traders. 18 Go tools — scan, backtest, trade, manage risk — across 6 brokers: Tiger, Moomoo, eToro, Alpaca, IBKR, and Zerodha.
 
 **Repo:** https://github.com/Orbital-Trade/trade-kit
 **License:** MIT
@@ -35,25 +35,28 @@ Standalone tools (scheduler, daytrader, etc.) use `GOWORK=off` because they're n
 
 ---
 
-## Tools (15 total)
+## Tools (18 total)
 
 | Dir | Binary | Purpose |
 |-----|--------|---------|
 | `tiger/` | `tiger-cli` | Tiger Brokers CLI — quotes, orders, positions, analyze, markov |
 | `moomoo/` | `moomoo-cli` | Moomoo/Futu CLI — pure Go TCP client via OpenD |
 | `etoro/` | `etoro-cli` | eToro CLI — REST API, demo/live, watchlists, alerts |
+| `alpaca/` | `alpaca-cli` | Alpaca Markets CLI — commission-free US equities, paper API built in |
+| `ibkr/` | `ibkr-cli` | Interactive Brokers CLI — Client Portal Gateway, conid resolution |
+| `zerodha/` | `zerodha-cli` | Zerodha Kite Connect CLI — Indian markets (NSE/BSE), form-encoded orders |
 | `scheduler/` | `scheduler` | Order queue daemon — market-window scheduling |
 | `daytrader/` | `daytrader-bot` | Gap-up scanner (Game 3) |
 | `earnings/` | `earnings-bot` | Earnings play scanner (Game 1) |
 | `bounce/` | `bounce-bot` | RSI oversold bounce scanner (Game 2) |
 | `index/` | `index-trader` | QQQ/VIX momentum — TQQQ/SQQQ (Game 5) |
-| `controller/` | `controller` | Risk manager — circuit breaker, NAV, gate, e-stop |
+| `controller/` | `controller` | Risk manager — circuit breaker, NAV, gate, e-stop, --simulate-drawdown |
 | `backtest/` | `backtest` | Historical strategy replay via Yahoo Finance |
 | `options/` | `options` | Options chain viewer — calls/puts, IV, OI |
 | `notifier/` | `notifier` | Signal delivery — Telegram + Discord |
 | `alert/` | `alert` | Price threshold daemon |
 | `journal/` | `journal` | SQLite trade journal with FIFO P&L |
-| `sidecar/` | `trade-kit` | HTTP server — bridges Electron desktop app to brokers |
+| `sidecar/` | `trade-kit` | HTTP server — bridges Electron desktop app to 6 brokers |
 
 Each tool: own `go.mod`, own binary, own JSON config. No shared runtime deps.
 
@@ -65,6 +68,9 @@ Each tool: own `go.mod`, own binary, own JSON config. No shared runtime deps.
 tiger/client/     → TigerClient (RSA auth, REST)
 moomoo/client/    → Client (TCP to OpenD)
 etoro/client/     → EtoroClient (token auth, REST)
+alpaca/client/    → AlpacaClient (API key headers, paper/live URLs)
+ibkr/client/      → IBKRClient (Client Portal Gateway, self-signed TLS)
+zerodha/client/   → ZerodhaClient (Kite Connect token auth, form-encoded)
 
 */strategy/       → exported strategy packages (FetchSetup, Evaluate)
 */internal/       → broker, signal bus, store (NOT importable by sidecar)
