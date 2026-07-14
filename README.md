@@ -126,6 +126,91 @@ futu-opend &              # start OpenD in background
 
 </details>
 
+<details>
+<summary><strong>eToro credentials</strong></summary>
+
+1. Go to [api-portal.etoro.com](https://api-portal.etoro.com) and request API access
+2. Create `~/.trade-kit/etoro/.env`:
+
+```env
+ETORO_API_KEY=<your API key>
+ETORO_USER_KEY=<your user authentication token>
+```
+
+3. Test connection:
+
+```bash
+./etoro-cli account              # demo mode (default)
+./etoro-cli --live account       # real account
+```
+
+</details>
+
+<details>
+<summary><strong>Alpaca credentials</strong></summary>
+
+1. Create a free account at [app.alpaca.markets](https://app.alpaca.markets)
+2. Generate API keys in the dashboard (paper keys work immediately)
+3. Create `~/.trade-kit/alpaca/.env`:
+
+```env
+ALPACA_KEY_ID=<your API key ID>
+ALPACA_SECRET_KEY=<your secret key>
+```
+
+4. Test connection:
+
+```bash
+./alpaca-cli account             # paper mode (default)
+./alpaca-cli --live account      # real account
+```
+
+</details>
+
+<details>
+<summary><strong>Interactive Brokers credentials</strong></summary>
+
+1. Download and run [Client Portal Gateway](https://www.interactivebrokers.com/en/trading/ib-api.php) — it runs on localhost:5000
+2. Log in via the browser UI at `https://localhost:5000`
+3. Create `~/.trade-kit/ibkr/.env`:
+
+```env
+IBKR_GATEWAY_HOST=localhost
+IBKR_GATEWAY_PORT=5000
+IBKR_ACCOUNT_ID=<your account ID>
+```
+
+4. Test connection (gateway must be running):
+
+```bash
+./ibkr-cli account
+```
+
+</details>
+
+<details>
+<summary><strong>Zerodha credentials</strong></summary>
+
+1. Register at [developers.kite.trade](https://developers.kite.trade) for a Kite Connect API key
+2. Complete the browser-based OAuth login to get an access token
+3. Create `~/.trade-kit/zerodha/.env`:
+
+```env
+ZERODHA_API_KEY=<your API key>
+ZERODHA_API_SECRET=<your API secret>
+ZERODHA_ACCESS_TOKEN=<your session access token>
+```
+
+4. Test connection:
+
+```bash
+./zerodha-cli account
+```
+
+Note: Access tokens expire daily — you'll need to re-authenticate each session.
+
+</details>
+
 ---
 
 ## Paper · Semi · Live
@@ -1161,6 +1246,10 @@ Working directory:
 Credentials:
   ~/.trade-kit/tiger/.env
   ~/.trade-kit/moomoo/.env
+  ~/.trade-kit/etoro/.env
+  ~/.trade-kit/alpaca/.env
+  ~/.trade-kit/ibkr/.env
+  ~/.trade-kit/zerodha/.env
 ```
 
 ---
@@ -1177,6 +1266,10 @@ Credentials:
 | `Gate blocked — max positions` | 6+ open positions | Close something before opening new trades |
 | `drift >2%` | Price moved away from signal before execution | Signal is stale — rescan |
 | `yahoo_kline: no data` | Yahoo Finance rate limit or bad symbol | Wait 60s, retry, or check ticker spelling |
+| `auth failed (401)` (alpaca) | Bad API keys | Regenerate at app.alpaca.markets |
+| `auth failed (403)` (etoro) | Expired user key | Get new token at api-portal.etoro.com |
+| `TLS handshake error` (ibkr) | Gateway not running | Start Client Portal Gateway, login via browser |
+| `token expired` (zerodha) | Daily token expired | Re-authenticate via Kite Connect login flow |
 | `build failed` | Go version < 1.21 | `go version`, upgrade if needed |
 
 ### Debug mode (tiger-cli)
@@ -1193,7 +1286,7 @@ TIGER_LOG_LEVEL=debug ./tiger-cli quote AAPL
 
 Semantic versioning. See [CHANGELOG.md](CHANGELOG.md).
 
-Current version: **v0.5.0**
+Current version: check [VERSION](VERSION) file.
 
 ---
 
@@ -1203,7 +1296,7 @@ trade-kit is free and MIT-licensed. If it's useful, here's how to support it —
 
 ### Open a broker account through a referral link
 
-Both brokers trade-kit talks to run referral programs with welcome rewards for you and a credit for the project.
+Several brokers trade-kit supports run referral programs with welcome rewards for you and a credit for the project.
 
 - **Tiger Brokers (SG)** — [Sign up with code F3MUAJ](https://www.tigerbrokers.com.sg/?invite=F3MUAJ) · up to S$1,000 in welcome rewards for new accounts
 - **Moomoo (SG)** — [Sign up](https://j.moomoo.com/0CXYTY) · free stocks + cash coupons for new accounts
@@ -1227,11 +1320,16 @@ trade-kit is the open-source core of [**OrbitalTrade**](https://trade.orbitalpay
 
 ## Roadmap
 
-- [ ] `notifier` — Telegram/Discord signal delivery
-- [ ] `alert` — price alert daemon (monitors watchlist for threshold triggers)
-- [ ] `journal` — trade journal + P&L stats (SQLite, auto-populated from brokers)
-- [ ] `backtest` — historical strategy validation via Yahoo Finance OHLCV
-- [ ] `options` — options chain viewer (calls/puts, IV, OI)
+- [x] `notifier` — Telegram/Discord signal delivery
+- [x] `alert` — price alert daemon
+- [x] `journal` — trade journal with FIFO P&L (SQLite)
+- [x] `backtest` — historical strategy validation via Yahoo Finance
+- [x] `options` — options chain viewer (calls/puts, IV, OI)
+- [x] `etoro-cli` — eToro broker integration
+- [x] `alpaca-cli` — Alpaca Markets (commission-free US equities)
+- [x] `ibkr-cli` — Interactive Brokers (global markets)
+- [x] `zerodha-cli` — Zerodha Kite Connect (Indian markets)
+- [x] `sidecar` — HTTP server for OrbitalTrade desktop app
 - [ ] GoReleaser CI — pre-built binaries for macOS, Linux, Windows
 
 ---
