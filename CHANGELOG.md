@@ -6,6 +6,30 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [0.9.0] — 2026-07-14
+
+### Added
+
+**ibkr-cli — Interactive Brokers integration**
+- Client Portal Gateway API client (localhost, self-signed TLS)
+- Session-based auth — gateway manages login, no API keys
+- Contract ID (conid) resolution with caching
+- Commands: positions, account, quote, orders, buy, sell, close, cancel
+- Global market access: US, EU, Asia, commodities, options, futures
+
+**zerodha-cli — Zerodha Kite Connect integration**
+- Kite Connect v3 API client for Indian markets (NSE/BSE)
+- Token auth with form-encoded order placement
+- Products: CNC (delivery), MIS (intraday), NRML (F&O)
+- Separate holdings command for DEMAT positions
+- Yahoo Finance fallback with .NS suffix
+
+**Sidecar: 6 brokers total**
+- IBKR and Zerodha adapters registered in broker registry
+- Tiger, Moomoo, eToro, Alpaca, IBKR, Zerodha all accessible via unified REST API
+
+---
+
 ## [0.8.0] — 2026-07-14
 
 ### Added
