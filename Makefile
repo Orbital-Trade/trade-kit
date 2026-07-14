@@ -1,4 +1,4 @@
-TOOLS := tiger moomoo etoro alpaca sidecar scheduler daytrader earnings bounce controller index notifier alert journal options backtest
+TOOLS := tiger moomoo etoro alpaca ibkr zerodha sidecar scheduler daytrader earnings bounce controller index notifier alert journal options backtest
 
 .PHONY: all clean test $(TOOLS)
 
@@ -15,6 +15,12 @@ etoro:
 
 alpaca:
 	cd alpaca    && GOWORK=off go build -o alpaca-cli   ./cmd/
+
+ibkr:
+	cd ibkr      && GOWORK=off go build -o ibkr-cli     ./cmd/
+
+zerodha:
+	cd zerodha   && GOWORK=off go build -o zerodha-cli  ./cmd/
 
 sidecar:
 	cd sidecar   && go build -ldflags "-X main.Version=$$(cat ../VERSION)" -o trade-kit ./cmd/
@@ -71,5 +77,7 @@ clean:
 	rm -f etoro/etoro-cli
 	rm -f sidecar/trade-kit
 	rm -f alpaca/alpaca-cli
+	rm -f ibkr/ibkr-cli
+	rm -f zerodha/zerodha-cli
 	rm -f controller/controller
 	rm -f backtest/backtest

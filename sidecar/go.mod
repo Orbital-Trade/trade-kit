@@ -11,4 +11,6 @@ require (
 	earnings-bot v0.0.0
 	github.com/jpramirez/trade-kit/index v0.0.0
 	alpaca-cli v0.0.0
+	ibkr-cli v0.0.0
+	zerodha-cli v0.0.0
 )

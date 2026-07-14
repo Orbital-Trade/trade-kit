@@ -10,6 +10,8 @@ index/index-trader
 notifier/notifier
 etoro/etoro-cli
 alpaca/alpaca-cli
+ibkr/ibkr-cli
+zerodha/zerodha-cli
 sidecar/trade-kit
 alert/alert
 journal/journal
