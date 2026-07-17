@@ -50,6 +50,8 @@ func main() {
 		cmdList(store, os.Args[2:])
 	case "pnl":
 		cmdPnL(store, os.Args[2:])
+	case "export":
+		cmdExport(store, os.Args[2:])
 	default:
 		usage()
 		os.Exit(1)
@@ -202,6 +204,37 @@ func cmdPnL(store *db.DB, args []string) {
 	fmt.Printf("%-8s  %s%9.2f\n", "TOTAL", sign, totalRealized)
 }
 
+// ─── EXPORT ─────────────────────────────────────────────────────────────────
+
+func cmdExport(store *db.DB, args []string) {
+	symbol := ""
+	days := 0
+	for i := 0; i < len(args)-1; i++ {
+		switch args[i] {
+		case "--symbol":
+			symbol = strings.ToUpper(args[i+1])
+			i++
+		case "--days":
+			days, _ = strconv.Atoi(args[i+1])
+			i++
+		}
+	}
+
+	trades, err := store.List(symbol, days)
+	if err != nil {
+		fatalf("export: %v", err)
+	}
+
+	fmt.Println("id,side,symbol,qty,price,date,broker,order_id,strategy,note")
+	for _, t := range trades {
+		note := strings.ReplaceAll(t.Note, ",", ";")
+		fmt.Printf("%d,%s,%s,%d,%.4f,%s,%s,%s,%s,%s\n",
+			t.ID, t.Side, t.Symbol, t.Qty, t.Price,
+			t.FilledAt.Format("2006-01-02"),
+			t.Broker, t.OrderID, t.Strategy, note)
+	}
+}
+
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 func fatalf(format string, args ...interface{}) {
@@ -219,6 +252,7 @@ COMMANDS
   add <BUY|SELL> <SYMBOL> <QTY> <PRICE>   Record a trade manually
   list [--symbol SYM] [--days N]           Show trade history
   pnl  [--symbol SYM]                      Realized P&L per symbol
+  export [--symbol SYM] [--days N]         Export trades as CSV to stdout
 
 ADD FLAGS
   --broker <name>       tiger | moomoo | manual (default: empty)
@@ -238,6 +272,8 @@ EXAMPLES
   journal list --days 30
   journal pnl
   journal pnl --symbol LUNR
+  journal export > trades.csv
+  journal export --symbol LUNR --days 90 > lunr.csv
 
 BUILD
   cd journal && go build -o journal ./cmd/
