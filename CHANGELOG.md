@@ -6,6 +6,18 @@ Format: [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`
 
 ---
 
+## [0.9.1] — 2026-07-17
+
+### Added
+
+**journal: CSV export**
+- `journal export [--symbol SYM] [--days N]` — writes trades as CSV to stdout
+- Pipe to file: `journal export > trades.csv`
+- Supports same filters as `list` (symbol, days)
+- Community-requested feature for backup and spreadsheet import
+
+---
+
 ## [0.9.0] — 2026-07-14
 
 ### Added
