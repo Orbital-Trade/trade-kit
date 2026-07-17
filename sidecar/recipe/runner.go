@@ -106,6 +106,26 @@ func (r *Runner) List() []RecipeState {
 		}
 		out = append(out, state)
 	}
+	// Include running custom (ScanQL) recipes not in definitions.
+	for id, run := range r.running {
+		if _, defined := r.definitions[id]; defined {
+			continue
+		}
+		state := RecipeState{
+			ID:          id,
+			Name:        id + " (custom)",
+			Status:      "running",
+			StartedAt:   &run.startedAt,
+			ScanCount:   run.scanCount,
+			LastScanAt:  run.lastScanAt,
+			SignalCount: len(run.bus.All()),
+		}
+		if run.err != "" {
+			state.Status = "error"
+			state.Error = run.err
+		}
+		out = append(out, state)
+	}
 	return out
 }
 
@@ -287,6 +307,114 @@ func (r *Runner) Start(id string, configOverride json.RawMessage) error {
 				"status":    "error",
 				"error":     err.Error(),
 			})
+		}
+	}()
+
+	return nil
+}
+
+// StartCustom launches a custom ScanQL strategy as a recipe.
+func (r *Runner) StartCustom(name string, strategyFn StrategyFunc) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, running := r.running[name]; running {
+		return fmt.Errorf("recipe %s is already running", name)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	bus := NewMemBus(func(sig RecipeSignal) {
+		r.broadcaster.Broadcast("recipe_signal", map[string]interface{}{
+			"recipe_id": name,
+			"signal":    sig,
+		})
+	})
+
+	run := &runningRecipe{
+		startedAt: time.Now(),
+		cancel:    cancel,
+		bus:       bus,
+	}
+	r.running[name] = run
+
+	r.broadcaster.Broadcast("recipe_state", map[string]interface{}{
+		"recipe_id": name,
+		"status":    "running",
+	})
+
+	findBroker := func() BrokerExecutor {
+		for _, b := range r.registry.List() {
+			if b.Connected {
+				adapter, _ := r.registry.Get(b.ID)
+				if adapter != nil {
+					return adapter
+				}
+			}
+		}
+		return nil
+	}
+
+	go func() {
+		defer func() {
+			if p := recover(); p != nil {
+				r.mu.Lock()
+				if run, ok := r.running[name]; ok {
+					run.err = fmt.Sprintf("panic: %v", p)
+				}
+				r.mu.Unlock()
+				r.broadcaster.Broadcast("recipe_state", map[string]interface{}{
+					"recipe_id": name,
+					"status":    "error",
+					"error":     fmt.Sprintf("panic: %v", p),
+				})
+			}
+		}()
+
+		onSignal := func(sig RecipeSignal) {
+			bus.Add(sig)
+			r.mu.Lock()
+			if run, ok := r.running[name]; ok {
+				run.scanCount++
+				now := time.Now()
+				run.lastScanAt = &now
+			}
+			r.mu.Unlock()
+		}
+
+		onExecute := func(sig RecipeSignal) error {
+			broker := findBroker()
+			if broker == nil || r.registry.IsPaper() {
+				bus.Update(sig.ID, "filled", "PAPER-ENTRY", "PAPER-STOP")
+				r.broadcaster.Broadcast("recipe_fill", map[string]interface{}{
+					"recipe_id": name, "signal": sig, "mode": "paper",
+				})
+				return nil
+			}
+			if sig.Action == "exit" {
+				orderID, err := broker.Sell(sig.Symbol, sig.Qty)
+				if err != nil {
+					bus.Update(sig.ID, "rejected", "", "")
+					return err
+				}
+				bus.Update(sig.ID, "filled", orderID, "")
+				return nil
+			}
+			entryID, stopID, err := broker.Buy(sig.Symbol, sig.Qty, sig.LimitPrice, sig.StopPrice)
+			if err != nil {
+				bus.Update(sig.ID, "rejected", "", "")
+				return err
+			}
+			bus.Update(sig.ID, "filled", entryID, stopID)
+			return nil
+		}
+
+		if err := strategyFn(ctx, nil, onSignal, onExecute); err != nil {
+			log.Printf("[recipe] %s exited: %v", name, err)
+			r.mu.Lock()
+			if run, ok := r.running[name]; ok {
+				run.err = err.Error()
+			}
+			r.mu.Unlock()
 		}
 	}()
 

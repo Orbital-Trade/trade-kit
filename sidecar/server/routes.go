@@ -41,6 +41,11 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v1/strategies", h.ListStrategies)
 	mux.HandleFunc("GET /v1/strategies/{id}", h.GetStrategy)
 
+	// ScanQL
+	mux.HandleFunc("POST /v1/recipes/custom", h.StartCustomRecipe)
+	mux.HandleFunc("POST /v1/scanql/validate", h.ValidateScanQL)
+	mux.HandleFunc("GET /v1/scanql/examples", h.ScanQLExamples)
+
 	// Settings
 	mux.HandleFunc("POST /v1/settings/paper-mode", h.SetPaperMode)
 
