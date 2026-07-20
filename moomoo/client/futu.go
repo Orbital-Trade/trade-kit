@@ -434,10 +434,24 @@ func (c *Client) call(protoID uint32, payload any) (json.RawMessage, error) {
 		return nil, fmt.Errorf("recv header proto %d: %w", protoID, err)
 	}
 	bodyLen := binary.LittleEndian.Uint32(rHdr[12:16])
+	respBodyType := binary.LittleEndian.Uint32(rHdr[16:20])
+
 	rBody := make([]byte, bodyLen)
 	if bodyLen > 0 {
 		if _, err := readFull(c.conn, rBody); err != nil {
 			return nil, fmt.Errorf("recv body proto %d: %w", protoID, err)
+		}
+	}
+
+	// OpenD v10.8+ may respond with protobuf (body_type=0) even when we request JSON.
+	// If the response isn't JSON, return a descriptive error.
+	if respBodyType != bodyTypeJSON {
+		// Try to parse anyway — some versions send body_type=0 but still use JSON.
+		if len(rBody) > 0 && (rBody[0] == '{' || rBody[0] == '[') {
+			// It's actually JSON despite the header — proceed.
+		} else {
+			return nil, fmt.Errorf("OpenD responded with protobuf (body_type=%d) for proto %d — "+
+				"upgrade OpenD or set body_type=JSON in OpenD config", respBodyType, protoID)
 		}
 	}
 
