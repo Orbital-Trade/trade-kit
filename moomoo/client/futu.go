@@ -1,17 +1,19 @@
 // Package client implements a minimal Futu OpenD TCP client in pure Go.
 //
 // OpenD listens on localhost:11111 by default. Messages use a 44-byte header
-// followed by a JSON body (body_type=1). No protobuf dependency needed.
+// followed by a JSON body (proto_fmt_type=1). No protobuf dependency needed.
 //
-// Packet layout:
-//   [0:4]   magic  — 0x46 0x54 0x20 0x20 ("FT  ")
-//   [4:8]   proto_id  (uint32 LE)
-//   [8:12]  serial_no (uint32 LE) — monotonically increasing per connection
-//   [12:16] body_len  (uint32 LE)
-//   [16:20] body_type (uint32 LE) — 1 = JSON
-//   [20:40] SHA1 of body (20 bytes) — zeros accepted by OpenD
-//   [40:44] reserved  (zeros)
-//   [44:]   JSON body
+// Packet layout (from Futu SDK MESSAGE_HEAD_FMT = "<1s1sI2B2I20s8s"):
+//   [0:1]   'F'
+//   [1:2]   'T'
+//   [2:6]   proto_id       (uint32 LE)
+//   [6]     proto_fmt_type (uint8) — 0=protobuf, 1=JSON
+//   [7]     proto_ver      (uint8)
+//   [8:12]  serial_no      (uint32 LE)
+//   [12:16] body_len       (uint32 LE)
+//   [16:36] sha1           (20 bytes) — zeros accepted by OpenD
+//   [36:44] reserved       (8 bytes)
+//   [44:]   body
 package client
 
 import (
@@ -40,13 +42,13 @@ const (
 )
 
 const (
-	headerSize    = 44
-	bodyTypeJSON  = 1
-	secFirmFUTUSG = 5
-	trdEnvReal    = 1
+	headerSize       = 44
+	bodyTypeJSON byte = 1 // proto_fmt_type: 0=protobuf, 1=JSON
+	secFirmFUTUSG    = 5
+	trdEnvReal       = 1
 )
 
-var magic = [4]byte{0x46, 0x54, 0x20, 0x20}
+var magic = [2]byte{0x46, 0x54} // "FT"
 
 // Client is a connected, authenticated Futu OpenD session.
 type Client struct {
@@ -416,12 +418,15 @@ func (c *Client) call(protoID uint32, payload any) (json.RawMessage, error) {
 
 	sn := atomic.AddUint32(&c.serial, 1)
 	hdr := make([]byte, headerSize)
-	copy(hdr[0:4], magic[:])
-	binary.LittleEndian.PutUint32(hdr[4:8], protoID)
-	binary.LittleEndian.PutUint32(hdr[8:12], sn)
-	binary.LittleEndian.PutUint32(hdr[12:16], uint32(len(body)))
-	binary.LittleEndian.PutUint32(hdr[16:20], bodyTypeJSON)
-	// bytes 20-43: SHA1 + reserved — leave as zeros (OpenD accepts this)
+	hdr[0] = magic[0]                                        // 'F'
+	hdr[1] = magic[1]                                        // 'T'
+	binary.LittleEndian.PutUint32(hdr[2:6], protoID)         // proto_id
+	hdr[6] = bodyTypeJSON                                    // proto_fmt_type (1=JSON)
+	hdr[7] = 0                                               // proto_ver
+	binary.LittleEndian.PutUint32(hdr[8:12], sn)             // serial_no
+	binary.LittleEndian.PutUint32(hdr[12:16], uint32(len(body))) // body_len
+	// bytes 16-35: SHA1 — zeros accepted by OpenD
+	// bytes 36-43: reserved
 
 	c.conn.SetDeadline(time.Now().Add(10 * time.Second))
 	if _, err := c.conn.Write(append(hdr, body...)); err != nil {
@@ -434,7 +439,7 @@ func (c *Client) call(protoID uint32, payload any) (json.RawMessage, error) {
 		return nil, fmt.Errorf("recv header proto %d: %w", protoID, err)
 	}
 	bodyLen := binary.LittleEndian.Uint32(rHdr[12:16])
-	respBodyType := binary.LittleEndian.Uint32(rHdr[16:20])
+	respFmtType := rHdr[6] // proto_fmt_type: 0=protobuf, 1=JSON
 
 	rBody := make([]byte, bodyLen)
 	if bodyLen > 0 {
@@ -443,15 +448,13 @@ func (c *Client) call(protoID uint32, payload any) (json.RawMessage, error) {
 		}
 	}
 
-	// OpenD v10.8+ may respond with protobuf (body_type=0) even when we request JSON.
-	// If the response isn't JSON, return a descriptive error.
-	if respBodyType != bodyTypeJSON {
-		// Try to parse anyway — some versions send body_type=0 but still use JSON.
+	// Check if OpenD responded with protobuf instead of JSON.
+	if respFmtType != bodyTypeJSON {
 		if len(rBody) > 0 && (rBody[0] == '{' || rBody[0] == '[') {
-			// It's actually JSON despite the header — proceed.
+			// Body looks like JSON despite the header — proceed.
 		} else {
-			return nil, fmt.Errorf("OpenD responded with protobuf (body_type=%d) for proto %d — "+
-				"upgrade OpenD or set body_type=JSON in OpenD config", respBodyType, protoID)
+			return nil, fmt.Errorf("OpenD responded with protobuf (fmt_type=%d) for proto %d — "+
+				"ensure OpenD is configured for JSON mode", respFmtType, protoID)
 		}
 	}
 
