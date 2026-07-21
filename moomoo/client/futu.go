@@ -56,6 +56,8 @@ type Client struct {
 	conn    net.Conn
 	paper   bool
 	accID   int64
+	connID  uint64
+	userID  uint64
 	serial  uint32
 }
 
@@ -123,10 +125,10 @@ func Connect(cfg Config, paper bool) (*Client, error) {
 				break
 			}
 			if strings.Contains(unlockErr.Error(), "not ready") {
-				time.Sleep(time.Duration(attempt+1) * time.Second)
+				time.Sleep(2 * time.Second)
 				continue
 			}
-			break // real error, don't retry
+			break
 		}
 		if unlockErr != nil {
 			conn.Close()
@@ -374,13 +376,30 @@ func (c *Client) trdHeader() map[string]any {
 func (c *Client) initConnect() error {
 	req := map[string]any{
 		"c2s": map[string]any{
-			"clientVer":   300,
-			"clientID":    "moomoo-cli-go",
-			"recvNotify":  false,
+			"clientVer":           300,
+			"clientID":            "moomoo-cli-go",
+			"recvNotify":          false,
+			"programmingLanguage": "Go",
 		},
 	}
-	_, err := c.call(protoInitConnect, req)
-	return err
+	raw, err := c.call(protoInitConnect, req)
+	if err != nil {
+		return err
+	}
+	// Parse InitConnect response to get connID and loginUserID.
+	var resp struct {
+		S2C struct {
+			ConnID  json.Number `json:"connID"`
+			UserID  json.Number `json:"loginUserID"`
+		} `json:"s2c"`
+	}
+	if json.Unmarshal(raw, &resp) == nil {
+		cid, _ := resp.S2C.ConnID.Int64()
+		c.connID = uint64(cid)
+		uid, _ := resp.S2C.UserID.Int64()
+		c.userID = uint64(uid)
+	}
+	return nil
 }
 
 func (c *Client) discoverAccID() (int64, error) {
@@ -418,10 +437,8 @@ func (c *Client) unlockTrade(pin string) error {
 	md5hex := strings.ToLower(fmt.Sprintf("%x", h))
 	req := map[string]any{
 		"c2s": map[string]any{
-			"unlock":       true,
-			"lockToken":    "",
-			"securityFirm": secFirmFUTUSG,
-			"pwdMD5":       md5hex,
+			"unlock": true,
+			"pwdMD5": md5hex,
 		},
 	}
 	_, err := c.call(protoUnlockTrade, req)
