@@ -45,28 +45,39 @@ const (
 const (
 	headerSize       = 44
 	bodyTypeJSON byte = 1 // proto_fmt_type: 0=protobuf, 1=JSON
-	secFirmFUTUSG    = 5
 	trdEnvReal       = 1
+
+	// SecurityFirm enum values (from Trd_Common.proto)
+	secFirmUnknown = 0
+	secFirmFutuHK  = 1 // Futu Securities (HK)
+	secFirmFutuUS  = 2 // Futu Inc (US)
+	secFirmFutuSG  = 3 // Futu SG
+	secFirmFutuAU  = 4 // Futu AU
+	secFirmFutuCA  = 5 // Futu CA
+	secFirmFutuMY  = 6 // Futu MY
+	secFirmFutuJP  = 7 // Futu JP
 )
 
 var magic = [2]byte{0x46, 0x54} // "FT"
 
 // Client is a connected, authenticated Futu OpenD session.
 type Client struct {
-	conn    net.Conn
-	paper   bool
-	accID   int64
-	connID  uint64
-	userID  uint64
-	serial  uint32
+	conn         net.Conn
+	paper        bool
+	accID        int64
+	connID       uint64
+	userID       uint64
+	securityFirm int
+	serial       uint32
 }
 
 // Config holds OpenD connection parameters loaded from environment / .env file.
 type Config struct {
-	Host      string
-	Port      int
-	TradePass string // 6-digit PIN
-	AccID     int64
+	Host         string
+	Port         int
+	TradePass    string // 6-digit PIN
+	AccID        int64
+	SecurityFirm int // 0=unknown, 1=HK, 2=US, 3=SG, 4=AU, 5=CA, 6=MY, 7=JP
 }
 
 // LoadConfig reads MOOMOO_HOST, MOOMOO_PORT, TRADE_PASSWORD, ACC_ID
@@ -79,11 +90,13 @@ func LoadConfig() Config {
 		port = 11111
 	}
 	accID, _ := strconv.ParseInt(getenv("ACC_ID", "0"), 10, 64)
+	secFirm, _ := strconv.Atoi(getenv("SECURITY_FIRM", "3")) // default SG
 	return Config{
-		Host:      host,
-		Port:      port,
-		TradePass: getenv("TRADE_PASSWORD", ""),
-		AccID:     accID,
+		Host:         host,
+		Port:         port,
+		TradePass:    getenv("TRADE_PASSWORD", ""),
+		AccID:        accID,
+		SecurityFirm: secFirm,
 	}
 }
 
@@ -95,7 +108,7 @@ func Connect(cfg Config, paper bool) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("OpenD not running on %s — start OpenD first: %w", addr, err)
 	}
-	c := &Client{conn: conn, paper: paper}
+	c := &Client{conn: conn, paper: paper, securityFirm: cfg.SecurityFirm}
 
 	// 1. InitConnect
 	if err := c.initConnect(); err != nil {
@@ -437,8 +450,9 @@ func (c *Client) unlockTrade(pin string) error {
 	md5hex := strings.ToLower(fmt.Sprintf("%x", h))
 	req := map[string]any{
 		"c2s": map[string]any{
-			"unlock": true,
-			"pwdMD5": md5hex,
+			"unlock":       true,
+			"pwdMD5":       md5hex,
+			"securityFirm": c.securityFirm,
 		},
 	}
 	_, err := c.call(protoUnlockTrade, req)

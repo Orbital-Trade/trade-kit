@@ -44,11 +44,17 @@ func (a *MoomooAdapter) Connect(creds map[string]string) error {
 	}
 	accID, _ := strconv.ParseInt(creds["acc_id"], 10, 64)
 
+	secFirm, _ := strconv.Atoi(creds["security_firm"])
+	if secFirm == 0 {
+		secFirm = 3 // default: FutuSG
+	}
+
 	cfg := mooclient.Config{
-		Host:      host,
-		Port:      port,
-		TradePass: creds["trade_password"],
-		AccID:     accID,
+		Host:         host,
+		Port:         port,
+		TradePass:    creds["trade_password"],
+		AccID:        accID,
+		SecurityFirm: secFirm,
 	}
 
 	c, err := mooclient.Connect(cfg, a.paper)
