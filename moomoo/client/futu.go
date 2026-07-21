@@ -378,8 +378,8 @@ func (c *Client) discoverAccID() (int64, error) {
 	var resp struct {
 		S2C struct {
 			AccList []struct {
-				AccID  int64  `json:"accID"`
-				TrdEnv int    `json:"trdEnv"`
+				AccID  json.Number `json:"accID"`
+				TrdEnv int         `json:"trdEnv"`
 			} `json:"accList"`
 		} `json:"s2c"`
 	}
@@ -387,12 +387,14 @@ func (c *Client) discoverAccID() (int64, error) {
 		return 0, fmt.Errorf("parse acc_list: %w", err)
 	}
 	for _, a := range resp.S2C.AccList {
+		id, _ := a.AccID.Int64()
 		if a.TrdEnv == trdEnvReal {
-			return a.AccID, nil
+			return id, nil
 		}
 	}
 	if len(resp.S2C.AccList) > 0 {
-		return resp.S2C.AccList[0].AccID, nil
+		id, _ := resp.S2C.AccList[0].AccID.Int64()
+		return id, nil
 	}
 	return 0, fmt.Errorf("no accounts found")
 }
