@@ -113,10 +113,24 @@ func Connect(cfg Config, paper bool) (*Client, error) {
 	c.accID = accID
 
 	// 3. Unlock trading (required before any trade operation)
+	// OpenD needs a moment after InitConnect before it accepts unlock requests.
 	if cfg.TradePass != "" {
-		if err := c.unlockTrade(cfg.TradePass); err != nil {
+		time.Sleep(500 * time.Millisecond)
+		var unlockErr error
+		for attempt := 0; attempt < 3; attempt++ {
+			unlockErr = c.unlockTrade(cfg.TradePass)
+			if unlockErr == nil {
+				break
+			}
+			if strings.Contains(unlockErr.Error(), "not ready") {
+				time.Sleep(time.Duration(attempt+1) * time.Second)
+				continue
+			}
+			break // real error, don't retry
+		}
+		if unlockErr != nil {
 			conn.Close()
-			return nil, fmt.Errorf("unlock_trade: %w", err)
+			return nil, fmt.Errorf("unlock_trade: %w", unlockErr)
 		}
 	}
 
