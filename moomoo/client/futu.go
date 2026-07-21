@@ -18,6 +18,7 @@ package client
 
 import (
 	"crypto/md5"
+	"crypto/sha1"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -425,7 +426,8 @@ func (c *Client) call(protoID uint32, payload any) (json.RawMessage, error) {
 	hdr[7] = 0                                               // proto_ver
 	binary.LittleEndian.PutUint32(hdr[8:12], sn)             // serial_no
 	binary.LittleEndian.PutUint32(hdr[12:16], uint32(len(body))) // body_len
-	// bytes 16-35: SHA1 — zeros accepted by OpenD
+	bodySHA := sha1.Sum(body)                                    // SHA1 of body
+	copy(hdr[16:36], bodySHA[:])                                 // bytes 16-35
 	// bytes 36-43: reserved
 
 	c.conn.SetDeadline(time.Now().Add(10 * time.Second))
