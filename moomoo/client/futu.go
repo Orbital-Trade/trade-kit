@@ -404,6 +404,7 @@ func (c *Client) unlockTrade(pin string) error {
 	md5hex := strings.ToLower(fmt.Sprintf("%x", h))
 	req := map[string]any{
 		"c2s": map[string]any{
+			"unlock":       true,
 			"lockToken":    "",
 			"securityFirm": secFirmFUTUSG,
 			"pwdMD5":       md5hex,
