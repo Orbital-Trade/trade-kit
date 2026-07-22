@@ -47,15 +47,21 @@ const (
 	bodyTypeJSON byte = 1 // proto_fmt_type: 0=protobuf, 1=JSON
 	trdEnvReal       = 1
 
-	// SecurityFirm enum values (from Trd_Common.proto)
+	// SecurityFirm enum (from Trd_Common.proto)
 	secFirmUnknown = 0
-	secFirmFutuHK  = 1 // Futu Securities (HK)
-	secFirmFutuUS  = 2 // Futu Inc (US)
-	secFirmFutuSG  = 3 // Futu SG
-	secFirmFutuAU  = 4 // Futu AU
-	secFirmFutuCA  = 5 // Futu CA
-	secFirmFutuMY  = 6 // Futu MY
-	secFirmFutuJP  = 7 // Futu JP
+	secFirmFutuHK  = 1
+	secFirmFutuUS  = 2
+	secFirmFutuSG  = 3
+	secFirmFutuAU  = 4
+	secFirmFutuCA  = 5
+	secFirmFutuMY  = 6
+	secFirmFutuJP  = 7
+
+	// TrdMarket enum (from Trd_Common.proto)
+	trdMarketHK = 1
+	trdMarketUS = 2
+	trdMarketCN = 3
+	trdMarketSG = 6
 )
 
 var magic = [2]byte{0x46, 0x54} // "FT"
@@ -68,6 +74,7 @@ type Client struct {
 	connID       uint64
 	userID       uint64
 	securityFirm int
+	trdMarket    int
 	serial       uint32
 }
 
@@ -78,6 +85,7 @@ type Config struct {
 	TradePass    string // 6-digit PIN
 	AccID        int64
 	SecurityFirm int // 0=unknown, 1=HK, 2=US, 3=SG, 4=AU, 5=CA, 6=MY, 7=JP
+	TrdMarket    int // 1=HK, 2=US, 3=CN, 6=SG (default: SG)
 }
 
 // LoadConfig reads MOOMOO_HOST, MOOMOO_PORT, TRADE_PASSWORD, ACC_ID
@@ -90,13 +98,15 @@ func LoadConfig() Config {
 		port = 11111
 	}
 	accID, _ := strconv.ParseInt(getenv("ACC_ID", "0"), 10, 64)
-	secFirm, _ := strconv.Atoi(getenv("SECURITY_FIRM", "3")) // default SG
+	secFirm, _ := strconv.Atoi(getenv("SECURITY_FIRM", "3")) // default FutuSG
+	trdMkt, _ := strconv.Atoi(getenv("TRD_MARKET", "6"))     // default SG
 	return Config{
 		Host:         host,
 		Port:         port,
 		TradePass:    getenv("TRADE_PASSWORD", ""),
 		AccID:        accID,
 		SecurityFirm: secFirm,
+		TrdMarket:    trdMkt,
 	}
 }
 
@@ -108,7 +118,11 @@ func Connect(cfg Config, paper bool) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("OpenD not running on %s — start OpenD first: %w", addr, err)
 	}
-	c := &Client{conn: conn, paper: paper, securityFirm: cfg.SecurityFirm}
+	trdMkt := cfg.TrdMarket
+	if trdMkt == 0 {
+		trdMkt = trdMarketSG
+	}
+	c := &Client{conn: conn, paper: paper, securityFirm: cfg.SecurityFirm, trdMarket: trdMkt}
 
 	// 1. InitConnect
 	if err := c.initConnect(); err != nil {
@@ -380,9 +394,9 @@ func (c *Client) ModifyOrder(orderID string, qty int64, price, auxPrice float64,
 
 func (c *Client) trdHeader() map[string]any {
 	return map[string]any{
-		"trdEnv": trdEnvReal,
-		"accID":  c.accID,
-		"trdMkt": 0, // 0 = all markets
+		"trdEnv":    trdEnvReal,
+		"accID":     c.accID,
+		"trdMarket": c.trdMarket,
 	}
 }
 

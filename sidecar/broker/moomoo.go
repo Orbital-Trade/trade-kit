@@ -48,6 +48,10 @@ func (a *MoomooAdapter) Connect(creds map[string]string) error {
 	if secFirm == 0 {
 		secFirm = 3 // default: FutuSG
 	}
+	trdMarket, _ := strconv.Atoi(creds["trd_market"])
+	if trdMarket == 0 {
+		trdMarket = 6 // default: SG
+	}
 
 	cfg := mooclient.Config{
 		Host:         host,
@@ -55,6 +59,7 @@ func (a *MoomooAdapter) Connect(creds map[string]string) error {
 		TradePass:    creds["trade_password"],
 		AccID:        accID,
 		SecurityFirm: secFirm,
+		TrdMarket:    trdMarket,
 	}
 
 	c, err := mooclient.Connect(cfg, a.paper)
