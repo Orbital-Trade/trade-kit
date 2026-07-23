@@ -47,16 +47,30 @@ Built for retail traders in Singapore, Hong Kong, India, and the US who want to 
 | journal | `journal` | Trade journal — SQLite log with FIFO P&L reporting |
 | sidecar | `trade-kit` | HTTP server — bridges the OrbitalTrade desktop app to all brokers |
 
-Jump to: [Setup](#setup) · [Strategy packs](#strategy-packs) · [Workflows](#workflow-playbooks) · [Signal bus](#the-signal-bus) · [Troubleshooting](#troubleshooting) · [Support this project](#support-this-project)
+Jump to: [Beyond the terminal](#beyond-the-terminal) · [Setup](#setup) · [Strategy packs](#strategy-packs) · [Workflows](#workflow-playbooks) · [Signal bus](#the-signal-bus) · [Troubleshooting](#troubleshooting) · [Support this project](#support-this-project)
 
 ---
 
 ## Beyond the terminal
 
-trade-kit is the open-source core of [**OrbitalTrade**](https://trade.orbitalpay.ai) — a hosted trading-intelligence platform with AI-generated theses, a live multi-market scanner (US/SGX/HK), a copilot, and a browser extension.
+trade-kit runs on your machine, in your terminal, with your credentials.
+That is the point — you own the execution.
 
+Some things a local CLI cannot do well:
+
+- Scan while you are reading a ticker in your browser
+- Keep watching the market when your laptop is closed
+- Cover US, SGX and HK without scheduling four bots
+
+[**OrbitalTrade**](https://trade.orbitalpay.ai) is the hosted half — a multi-market
+scanner, AI-written theses, and a browser extension. Analysis only; it never places
+orders. Execution stays here, with you.
+
+The desktop app talks to your brokers through this repo's `sidecar` — your keys never
+leave your machine.
+
+- 🔑 [Get a free API key](https://trade.orbitalpay.ai/register) — no card
 - 🧩 [OrbitalTrade for Chrome](https://chromewebstore.google.com/detail/orbitaltrade/kfndmcgcalllbgjiebgjhmefhfoiimde) — free
-- 🌐 [trade.orbitalpay.ai](https://trade.orbitalpay.ai) — free tools, blog, and paid tiers for higher limits
 
 ---
 
