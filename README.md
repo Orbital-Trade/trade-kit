@@ -51,6 +51,15 @@ Jump to: [Setup](#setup) · [Strategy packs](#strategy-packs) · [Workflows](#wo
 
 ---
 
+## Beyond the terminal
+
+trade-kit is the open-source core of [**OrbitalTrade**](https://trade.orbitalpay.ai) — a hosted trading-intelligence platform with AI-generated theses, a live multi-market scanner (US/SGX/HK), a copilot, and a browser extension.
+
+- 🧩 [OrbitalTrade for Chrome](https://chromewebstore.google.com/detail/orbitaltrade/kfndmcgcalllbgjiebgjhmefhfoiimde) — free
+- 🌐 [trade.orbitalpay.ai](https://trade.orbitalpay.ai) — free tools, blog, and paid tiers for higher limits
+
+---
+
 ## Strategy packs
 
 Ready-to-use config + watchlist bundles so you don't start from a blank file. Copy one, point a bot at it, and tune from there.
@@ -1308,13 +1317,6 @@ Several brokers trade-kit supports run referral programs with welcome rewards fo
 ### Sponsor on GitHub
 
 If trade-kit saves you time, consider [sponsoring on GitHub](https://github.com/sponsors/Orbital-Trade). Sponsorship funds new bots, broker integrations, and pre-built binaries.
-
-### Use the hosted platform
-
-trade-kit is the open-source core of [**OrbitalTrade**](https://trade.orbitalpay.ai) — a hosted trading-intelligence platform with AI-generated theses, a live multi-market scanner (US/SGX/HK), a copilot, and a browser extension.
-
-- 🧩 [OrbitalTrade for Chrome](https://chromewebstore.google.com/detail/orbitaltrade/kfndmcgcalllbgjiebgjhmefhfoiimde) — free
-- 🌐 [trade.orbitalpay.ai](https://trade.orbitalpay.ai) — free tools, blog, and paid tiers for higher limits
 
 ---
 
